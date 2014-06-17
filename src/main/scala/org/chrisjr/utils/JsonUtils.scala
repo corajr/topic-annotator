@@ -17,16 +17,19 @@ object JsonUtils {
 
   implicit object metadataFormat extends Format[Metadata] {
     def writes(metadata: Metadata) = {
-      JsObject(metadata.toSeq)
+      JsObject(metadata.fields.toSeq)
     }
     def reads(json: JsValue): JsResult[Metadata] = {
-      JsSuccess(json.as[JsObject].fields.toMap[String, JsValue].asInstanceOf[Metadata])
+      val fields = json.as[JsObject].fields
+      val serializable = fields.filter(_._2.isInstanceOf[JsValue with Serializable])
+        .map(x => (x._1, x._2.asInstanceOf[JsValue with Serializable]))
+      JsSuccess(Metadata(emptyFields ++ serializable.toMap[String, JsValue with Serializable]))
     }
   }
 
   implicit object metadataCollectionFormat extends Format[MetadataCollection] {
     def writes(mc: MetadataCollection) = {
-      JsObject(mc.map( x => x._1.toString -> JsObject(x._2.toSeq)).toSeq)
+      JsObject(mc.map(x => x._1.toString -> JsObject(x._2.fields.toSeq)).toSeq)
     }
     def reads(json: JsValue): JsResult[MetadataCollection] = {
       JsSuccess(json.as[JsObject].fields.map(x => URI.create(x._1) -> x._2.as[Metadata]).toMap[URI, Metadata])

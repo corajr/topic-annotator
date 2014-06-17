@@ -8,8 +8,9 @@ import java.io.File
 import java.net.URI
 import scala.util.Try
 
+case class Metadata(fields: immutable.HashMap[String, JsValue with Serializable])
+
 object MetadataCollection {
-  type Metadata = Map[String, JsValue]
   type MetadataCollection = Map[URI, Metadata]
 
   implicit class DirWithFind(dir: File) {
@@ -30,11 +31,11 @@ object MetadataCollection {
       val fnameFilter = mkFilter(_.toLowerCase == "metadata.csv")
       def parse(file: File) = {
         val reader = CSVReader.open(file)
-        (for {
+        empty ++ ((for {
           row <- reader.allWithHeaders
           uri = new File(file.getParentFile, row.getOrElse("filename", "")).toURI
           metadata = row.mapValues(JsString)
-        } yield uri -> metadata).toMap[URI, Metadata]
+        } yield uri -> Metadata(emptyFields ++ metadata)).toMap[URI, Metadata])
       }
     },
     new MetadataHandler {
@@ -50,8 +51,9 @@ object MetadataCollection {
       }
     })
 
-  def noMetadata = immutable.Map[String, JsValue]()
-  def empty = immutable.Map[URI, Metadata]().withDefaultValue(noMetadata)
+  def emptyFields = immutable.HashMap[String, JsValue with Serializable]()
+  def noMetadata = Metadata(emptyFields)
+  def empty = immutable.HashMap[URI, Metadata]().withDefaultValue(noMetadata)
 
   def fromDir(dir: File): MetadataCollection = (for {
     h <- handlers

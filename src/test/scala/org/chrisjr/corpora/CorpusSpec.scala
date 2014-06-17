@@ -34,7 +34,7 @@ class CorpusSpec extends FunSpec with CorpusFixture with TryValues {
     }
 
     it("should have metadata if a CSV file is available") {
-      corpus.documents.map(_.metadata).forall(_.nonEmpty) shouldBe true
+      corpus.documents.map(_.metadata.fields).forall(_.nonEmpty) shouldBe true
     }
 
     it("should not be initializable from an invalid directory") {
