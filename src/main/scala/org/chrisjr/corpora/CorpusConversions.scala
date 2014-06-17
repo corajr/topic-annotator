@@ -7,7 +7,7 @@ import cc.mallet.types._
 import Util._
 
 object CorpusConversions {
-  
+
   // each line: [total number of tokens] [type]:[count]
   // counts: .ldac, aux files: .dmap, .vocab
   def toLDAC(corpus: Corpus, ldacPrefix: File) = {
@@ -22,7 +22,7 @@ object CorpusConversions {
     val ldacWriter = new PrintWriter(ldacFile)
     for (docTf <- tfs) {
       val total = docTf.values.sum
-      val counts = docTf.map { case (word, count) => s"$word:$count"} mkString " "
+      val counts = docTf.map { case (word, count) => s"$word:$count" } mkString " "
       ldacWriter.println(s"$total $counts")
     }
     ldacWriter.close()
@@ -32,7 +32,7 @@ object CorpusConversions {
       vocabWriter.println(word)
     }
     vocabWriter.close()
-    
+
     val dmapWriter = new PrintWriter(dmapFile)
     for (docName <- corpus.documents.map(_.uri)) {
       dmapWriter.println(docName)
@@ -40,7 +40,7 @@ object CorpusConversions {
     dmapWriter.close()
     ldacFile
   }
-  
+
   def toMalletInstances(corpus: Corpus, malletFile: File) = {
     val pipe = new TokenSequence2FeatureSequence
     val instances = new InstanceList(pipe)
@@ -50,8 +50,8 @@ object CorpusConversions {
       while (tokenIterator.hasNext) {
         ts.add(tokenIterator.next.string)
       }
- 	  val instance = new cc.mallet.types.Instance(ts, null, null, null);
- 	  instances.addThruPipe(instance)
+      val instance = new cc.mallet.types.Instance(ts, null, doc.uri, null);
+      instances.addThruPipe(instance)
     }
     pickle(malletFile, instances)
     malletFile

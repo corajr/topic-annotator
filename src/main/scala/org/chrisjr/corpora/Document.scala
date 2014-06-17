@@ -8,7 +8,8 @@ import scala.util.matching.Regex
 import scala.util.{ Try, Success, Failure }
 import java.nio.charset.Charset
 
-case class Document(uri: String, tokens: GenSeq[Token]) {
+import MetadataCollection._
+case class Document(uri: String, metadata: Metadata = noMetadata, tokens: GenSeq[Token]) {
   def topicsHTML = {
     val reader = new BufferedReader(
       new InputStreamReader(
@@ -56,14 +57,14 @@ object Document {
     tokens
   }
 
-  def fromTextFile(file: File, encoding: String = "UTF-8"): Try[Document] = {
+  def fromTextFile(file: File, encoding: String = "UTF-8", metadata: Metadata = noMetadata): Try[Document] = {
     val source = Source.fromFile(file, encoding)
-    val docTry = Try(Document(file.getPath(), tokensFromLineIterator(source.getLines)))
+    val docTry = Try(Document(uri = file.getPath(), metadata = metadata, tokens = tokensFromLineIterator(source.getLines)))
     source.close
     docTry
   }
 
-  def fromString(uri: String, text: String) = {
-    Try(Document(uri, tokensFromLineIterator(text.split("\n").iterator)))
+  def fromString(uri: String, text: String, metadata: Metadata = noMetadata) = {
+    Try(Document(uri = uri, metadata = metadata, tokens = tokensFromLineIterator(text.split("\n").iterator)))
   }
 }

@@ -16,7 +16,7 @@ class DocumentSpec extends FunSpec with TryValues {
 
   describe("A Document") {
     it("should be empty to start") {
-      val doc = Document("", Seq())
+      val doc = Document(uri = "", tokens = Seq())
       doc.tokens.size shouldBe 0
     }
     
@@ -63,7 +63,6 @@ class DocumentSpec extends FunSpec with TryValues {
     
     it("should allow retrieving annotations as HTML") {
       val doc = Document.fromTextFile(validUtf8file).get
-      println(doc.topicsHTML)
       doc.topicsHTML should include ("</span>")
     }
   }

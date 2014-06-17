@@ -33,6 +33,10 @@ class CorpusSpec extends FunSpec with CorpusFixture with TryValues {
       corpus.documents.size should be > 0
     }
 
+    it("should have metadata if a CSV file is available") {
+      corpus.documents.map(_.metadata).forall(_.nonEmpty) shouldBe true
+    }
+
     it("should not be initializable from an invalid directory") {
       val corpusTry = Corpus.fromDir(new File("/#!(#$"))
       corpusTry shouldBe 'failure

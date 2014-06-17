@@ -19,12 +19,12 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
   }
 
   //  def sumByKey[A](tuples: GenIterable[(A, Int)]) = {
-//    tuples.groupBy(_._1).mapValues(_.unzip._2.sum)
-//  }
-//
-//  def maxByKey[A](tuples: GenIterable[(A, Int)]) = {
-//    tuples.groupBy(_._1).mapValues(_.unzip._2.max)
-//  }
+  //    tuples.groupBy(_._1).mapValues(_.unzip._2.sum)
+  //  }
+  //
+  //  def maxByKey[A](tuples: GenIterable[(A, Int)]) = {
+  //    tuples.groupBy(_._1).mapValues(_.unzip._2.max)
+  //  }
 
   lazy val vocab = {
     val vocabSet = new ConcurrentSkipListSet[String]
@@ -34,7 +34,7 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
     ) {
       vocabSet.add(tokenStr)
     }
-//    println(s"${vocabSet.size} distinct words")
+    //    println(s"${vocabSet.size} distinct words")
     vocabSet.iterator.zipWithIndex.toMap
   }
 
