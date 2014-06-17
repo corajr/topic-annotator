@@ -43,9 +43,10 @@ class CorpusSpec extends FunSpec with CorpusFixture with TryValues {
       corpusTry.failure.exception.getMessage should include("does not exist")
     }
 
-    it("should throw an exception if files are not valid UTF-8") {
+    it("should skip a file if it is not valid UTF-8") {
       val corpusTry = Corpus.fromDir(sampleTextsBadEncoding)
-      corpusTry shouldBe 'failure
+      corpusTry shouldBe 'success
+      corpusTry.get.documents.size shouldBe corpus.documents.size - 1
     }
 
     it("should have the same number of documents as text files") {

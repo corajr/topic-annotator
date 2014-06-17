@@ -51,7 +51,7 @@ class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3)
 
   def preprocess(corpus: Corpus) = {
     val scorer = new CorpusScorer(corpus, minDf)
-    val scores = scorer.tfidf.seq.toSeq.sortBy(_._2)
+    val scores = scorer.tfidf.seq.toSeq.sortBy(_._2).reverse
     stopwords.addAll(scores.drop(topWords).unzip._1)
   }
 

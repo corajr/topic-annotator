@@ -28,7 +28,6 @@ class CorpusScorerSpec extends FunSpec with CorpusScorerFixture {
     }
 
     it("should return TF-IDF scores") {
-//      println(scorer.tfidf)
       scorer.tfidf.size should be > 0
     }
   }

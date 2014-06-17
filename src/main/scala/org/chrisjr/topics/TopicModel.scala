@@ -2,9 +2,10 @@ package org.chrisjr.topics
 
 import org.chrisjr.corpora.Corpus
 import java.io.File
+import java.nio.file.Files
 
 class TopicModelParams {
-  var outputDir = File.createTempFile("topicmodel", null).getParentFile
+  var outputDir = Files.createTempDirectory("topicmodel").toFile
   var corpusFile = new File(outputDir, "corpus.dat")
   var stateFile = new File(outputDir, "assignments.txt")
   var numTopics = -1 // unused by HDP

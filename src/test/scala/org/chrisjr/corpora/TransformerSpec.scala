@@ -60,18 +60,18 @@ class CorpusTransformerSpec extends FunSpec with CorpusFixture with CheckTokens 
       }
     }
   }
-  
+
   describe("A sequence of Transformers") {
     they("should compose together") {
       val transformers = Seq(LowercaseTransformer, new RegexTransformer("t".r, ""))
       val aggregate = transformers.reduce(CorpusTransformer.combine)
-      checkTokens(corpus, aggregate, {x => (x == x.toLowerCase) && !x.contains("t")})    
+      checkTokens(corpus, aggregate, { x => (x == x.toLowerCase) && !x.contains("t") })
     }
 
     they("should return an altered corpus") {
       val transformers = Seq(LowercaseTransformer, new RegexTransformer("t".r, ""))
       val newCorpus = corpus.transform(transformers)
-      checkTokens(newCorpus, NoopTransformer, {x => (x == x.toLowerCase) && !x.contains("t")})    
+      checkTokens(newCorpus, NoopTransformer, { x => (x == x.toLowerCase) && !x.contains("t") })
     }
 
   }

@@ -17,7 +17,7 @@ object App {
 
     var corpus: Corpus = null
 
-    if (outputCorpusFile.isEmpty || !outputCorpusFile.forall(_.exists)) {
+    if (outputCorpusFile.isEmpty || outputCorpusFile.forall(!_.exists)) {
       var startTime = System.currentTimeMillis()
       var docsN = 0
       val corpusTry = Corpus.fromDir(inputDir)
