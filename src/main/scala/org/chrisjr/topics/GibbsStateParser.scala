@@ -9,9 +9,15 @@ import scala.util.parsing.input.StreamReader
 
 case class Assignment(doc: Int, word: Int, topic: Int)
 
-class SparseMatrix[V: Numeric] extends mutable.HashMap[Int, mutable.Map[Int, V]] {
+class SparseMatrix[V: Numeric] extends mutable.HashMap[Int, mutable.Map[Int, V]] with Serializable {
   var defaultV = implicitly[Numeric[V]].zero
   override def apply(x: Int) = this.getOrElseUpdate(x, mutable.Map[Int, V]().withDefaultValue(defaultV))
+  def normalized = {
+    this.map { case (i, m) =>
+      val total = implicitly[Numeric[V]].toDouble(m.values.sum)
+      i -> m.mapValues(v => implicitly[Numeric[V]].toDouble(v) / total)
+    }.toMap
+  }
 }
 
 object SparseMatrix {
@@ -22,7 +28,7 @@ object SparseMatrix {
   }
 }
 
-class GibbsState {
+class GibbsState extends Serializable {
   val docTopics = SparseMatrix(0)
   val topicTypes = SparseMatrix(0)
   val assignments = mutable.ArrayBuffer[Assignment]()
@@ -77,7 +83,6 @@ trait MalletStateParser extends GibbsStateParser {
 trait HDPStateParser extends GibbsStateParser {
   def parseLine = { case Array(doc, word, _, topic) if doc.forall(_.isDigit) => Assignment(doc.toInt, word.toInt, topic.toInt) }
 }
-
 
 object MalletStateReader extends GibbsStateReader with MalletStateParser {
   override def fromFile(file: File) = fromInputStream(new GZIPInputStream(new FileInputStream(file)))

@@ -4,7 +4,7 @@ import scala.util.matching.Regex
 import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.JavaConversions._
 
-trait CorpusTransformer {
+trait CorpusTransformer extends Serializable {
   def apply(corpus: Corpus) = Corpus(corpus.documents.map(process), corpus.transformers.:+(this))
   def process(document: Document): Document
 }

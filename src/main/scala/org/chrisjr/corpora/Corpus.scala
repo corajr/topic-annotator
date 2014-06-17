@@ -30,6 +30,8 @@ object Corpus {
     for {
       fileList <- Try(dir.listFiles(textFilenameFilter))
       documents = fileList.map { y: File => Document.fromTextFile(y, metadata = metadataColl(y.toURI())) }
-    } yield Corpus(documents.collect { case Success(x) => x; case Failure(e) => throw e })
+      successes = documents.collect { case Success(x) => x}
+      _ = (documents.collect { case Failure(e) => e.getStackTraceString }).foreach { println(_) }
+    } yield Corpus(successes)
   }
 }

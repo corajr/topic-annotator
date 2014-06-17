@@ -28,7 +28,7 @@ object MetadataCollection {
 
   val handlers = Seq(
     new MetadataHandler {
-      val fnameFilter = mkFilter(_.toLowerCase == "metadata.csv")
+      val fnameFilter = mkFilter(_.toLowerCase.endsWith("metadata.csv"))
       def parse(file: File) = {
         val reader = CSVReader.open(file)
         empty ++ ((for {
@@ -41,7 +41,7 @@ object MetadataCollection {
     new MetadataHandler {
       import org.chrisjr.utils.JsonUtils._
 
-      val fnameFilter = mkFilter(_.toLowerCase == "metadata.json")
+      val fnameFilter = mkFilter(_.toLowerCase.endsWith("metadata.json"))
 
       def parse(file: File) = {
         val source = Source.fromFile(file)
