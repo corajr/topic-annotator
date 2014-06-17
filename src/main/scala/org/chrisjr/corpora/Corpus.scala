@@ -18,6 +18,9 @@ case class Corpus(documents: GenSeq[Document], transformers: Seq[CorpusTransform
     //    aggregate.apply(this)
     newTransformers.foldLeft(this) { (x, y) => y(x) }
   }
+  def vocab = {
+    documents.flatMap(_.tokens.map(_.string)).distinct.seq
+  }
 }
 
 object Corpus {

@@ -21,8 +21,8 @@ object CorpusTransformer {
 }
 
 class TokenTransformer(f: String => String) extends CorpusTransformer {
-  def process(doc: Document) = doc.copy(tokens = 
-    doc.tokens.map { token => Token(token.start, token.end, f(token.string), token.topic) })
+  def process(doc: Document) = doc.copy(tokens =
+    doc.tokens.map { token => token.copy(string = f(token.string)) })
 }
 
 class TokenFilter(f: String => Boolean) extends CorpusTransformer {
@@ -55,6 +55,6 @@ class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3)
     stopwords.addAll(scores.drop(topWords).unzip._1)
   }
 
-  def process(doc: Document) = doc.copy(tokens = 
+  def process(doc: Document) = doc.copy(tokens =
     doc.tokens.filter { token => !stopwords.contains(token.string) })
 }
