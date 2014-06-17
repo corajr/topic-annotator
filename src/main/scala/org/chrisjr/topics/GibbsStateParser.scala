@@ -13,9 +13,10 @@ class SparseMatrix[V: Numeric] extends mutable.HashMap[Int, mutable.Map[Int, V]]
   var defaultV = implicitly[Numeric[V]].zero
   override def apply(x: Int) = this.getOrElseUpdate(x, mutable.Map[Int, V]().withDefaultValue(defaultV))
   def normalized = {
-    this.map { case (i, m) =>
-      val total = implicitly[Numeric[V]].toDouble(m.values.sum)
-      i -> m.mapValues(v => implicitly[Numeric[V]].toDouble(v) / total)
+    this.map {
+      case (i, m) =>
+        val total = implicitly[Numeric[V]].toDouble(m.values.sum)
+        i -> m.mapValues(v => implicitly[Numeric[V]].toDouble(v) / total)
     }.toMap
   }
 }
