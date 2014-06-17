@@ -4,6 +4,7 @@ import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 
+import sun.misc.BASE64Encoder
 import java.net.URI
 
 import org.chrisjr.corpora._
@@ -34,5 +35,20 @@ object JsonUtils {
     def reads(json: JsValue): JsResult[MetadataCollection] = {
       JsSuccess(json.as[JsObject].fields.map(x => URI.create(x._1) -> x._2.as[Metadata]).toMap[URI, Metadata])
     }
+  }
+
+  lazy val b64enc = new sun.misc.BASE64Encoder()
+  lazy val b64dec = new sun.misc.BASE64Decoder()
+  def topicsToBase64(topics: Array[Float]): String = {
+    val bb = java.nio.ByteBuffer.allocate(topics.length * 4)
+    bb.asFloatBuffer().put(topics)
+    b64enc.encode(bb)
+  }
+
+  def base64ToTopics(s: String): Array[Float] = {
+    val bb = b64dec.decodeBufferToByteBuffer(s)
+    val topics = new Array[Float](bb.capacity() / 4)
+    bb.asFloatBuffer().get(topics)
+    topics
   }
 }

@@ -1,10 +1,10 @@
 package org.chrisjr.corpora
 
 import org.scalatest._
+import org.scalatest.Matchers._
 import java.io.File
 import java.io.FileNotFoundException
 import scala.util.{ Try, Success, Failure }
-import org.scalatest.Matchers._
 
 object CorpusDir {
   val sampleTexts = new File(getClass.getResource("sample-texts").toURI())
