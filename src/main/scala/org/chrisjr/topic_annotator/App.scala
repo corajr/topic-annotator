@@ -28,8 +28,9 @@ object App {
       }
 
       val transformers = Seq(LowercaseTransformer,
+        new MinLengthRemover(4),
         StopwordRemover.forLang("en").get,
-        new ScoreTransformer())
+        new ScoreTransformer(topWords = 5000))
 
       corpus = corpusTry.get.transform(transformers)
       val elapsedTime = System.currentTimeMillis() - startTime
@@ -40,9 +41,11 @@ object App {
       corpus = Util.unpickle[Corpus](outputCorpusFile.get)
     }
 
-    val annotated = HDP.annotate(corpus)
-    
-    Util.pickle(new File(outputCorpusFile.get.getPath + ".hdp"), annotated)
+    val options = TopicModelParams.defaultFor(MalletLDA)
+    options.numTopics = 50
+    val annotated = MalletLDA.annotate(corpus, options)
+
+    Util.pickle(new File(outputCorpusFile.get.getPath + ".mallet"), annotated)
 
     /*
     for (doc <- annotated.documents) {

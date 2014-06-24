@@ -37,6 +37,8 @@ class RegexTransformer(regex: Regex, sub: String) extends TokenTransformer({ x =
   regex.replaceAllIn(x, sub)
 })
 
+class MinLengthRemover(minLength: Int) extends TokenFilter({ x => x.length >= minLength})
+
 trait PreprocessingTransformer extends CorpusTransformer {
   def preprocess(corpus: Corpus): Unit
   abstract override def apply(corpus: Corpus) = {

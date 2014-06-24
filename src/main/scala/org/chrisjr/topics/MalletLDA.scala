@@ -9,6 +9,7 @@ object MalletLDA extends TopicModel {
     if (!options.corpusFile.exists) toMalletInstances(corpus, options.corpusFile)
     val args = collection.mutable.ArrayBuffer[String]()
     args ++= Seq("--input", options.corpusFile.getCanonicalPath)
+    args ++= Seq("--num-topics", options.numTopics.toString)
     args ++= Seq("--output-state", options.stateFile.getCanonicalPath)  
     cc.mallet.topics.tui.TopicTrainer.main(args.toArray)
   }

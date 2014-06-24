@@ -9,7 +9,7 @@ import org.chrisjr.corpora.Corpus
 trait TopicTrainer { this: FunSpec =>
   def trainUsing(model: TopicModel, corpus: => Corpus, stateFile: File = File.createTempFile("assignments", null)) = {
     it("should be able to train a model from a corpus") {
-      val options = new TopicModelParams
+      val options = TopicModelParams.defaultFor(model)
       options.stateFile = stateFile
       model.trainFrom(corpus, options)
     }
