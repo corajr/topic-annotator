@@ -3,9 +3,26 @@ package org.chrisjr.utils
 import org.scalatest._
 import org.scalatest.Matchers._
 import scala.util.Random
+import org.chrisjr.corpora._
+import scala.collection.immutable
+import play.api.libs.json._
 
 class JsonUtilsSpec extends FunSpec {
   import JsonUtils._
+
+  val metadataMap = immutable.HashMap("title" -> JsString("blah"))
+  val sampleMetadata = Metadata(metadataMap)
+  describe("The Metadata format") {
+    it("should be able to serialize document metadata") {
+      val out = Json.toJson(sampleMetadata)
+    }
+    it("should be able to deserialize document metadata") {
+      val out = Json.toJson(sampleMetadata)
+      val metadata = Json.fromJson[Metadata](out).asOpt
+      metadata should not be empty
+      metadata.get shouldBe sampleMetadata
+    }
+  }
 
   describe("The Base-64 utilities") {
     it("should turn an array of floats into a string") {
@@ -24,5 +41,4 @@ class JsonUtilsSpec extends FunSpec {
 
     }
   }
-
 }

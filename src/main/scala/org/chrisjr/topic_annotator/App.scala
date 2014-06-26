@@ -15,7 +15,7 @@ object App {
     val startTime = System.currentTimeMillis()
     val state = MalletStateReader.fromFile(new File("/Users/chrisjr/Desktop/desk/viz_ethno/lda/topic-state.gz"))
     val imis = StateStats.getAllImis(state)
-    
+        
     println(s"${(System.currentTimeMillis() - startTime) / 1000.0} seconds.")
   }
 
