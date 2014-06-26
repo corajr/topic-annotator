@@ -18,17 +18,16 @@ object StateStats {
    * @return a map of topic-words to IMIs
    */
   def getAllImis(state: GibbsState) = {
-    def twByDoc(state: GibbsState, topic: Int, word: Int) = {
-      val perDoc = Array.fill(state.docsN)(0.0)
-      for (Assignment(d, w, t) <- state.assignments if t == topic && w == word) {
-        perDoc(d) += 1
-      }
-      perDoc
-    }
-
     val topicEntropies = for {
       topic <- 0 to state.topicsN
     } yield entropy(state.docTopics.map(_._2.apply(topic).toDouble))
+
+    val twByDoc = mutable.HashMap[(Int, Int), Array[Double]]()
+
+    for (Assignment(d, w, t) <- state.assignments) {
+      if (!twByDoc.contains((t,w))) twByDoc((t,w)) = Array.fill(state.docsN)(0.0)
+      twByDoc((t,w))(d) += 1
+    }
 
     val topicWordImi = SparseMatrix(0.0)
 
@@ -36,7 +35,7 @@ object StateStats {
       topic <- 0 until state.topicsN;
       word <- state.topicTypes(topic).keys;
       entropyDgivenk = topicEntropies(topic);
-      entropyDgivenwk = entropy(twByDoc(state, topic, word))
+      entropyDgivenwk = entropy(twByDoc((topic, word)))
     ) {
       if (!entropyDgivenk.isNaN() && !entropyDgivenwk.isNaN())
         topicWordImi(topic)(word) = entropyDgivenk - entropyDgivenwk

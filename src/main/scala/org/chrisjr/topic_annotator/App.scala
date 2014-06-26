@@ -10,7 +10,16 @@ import org.chrisjr.topics._
  */
 object App {
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]) = {
+    //    importCorpusAndProcess(args)
+    val startTime = System.currentTimeMillis()
+    val state = MalletStateReader.fromFile(new File("/Users/chrisjr/Desktop/desk/viz_ethno/lda/topic-state.gz"))
+    val imis = StateStats.getAllImis(state)
+    
+    println(s"${(System.currentTimeMillis() - startTime) / 1000.0} seconds.")
+  }
+
+  def importCorpusAndProcess(args: Array[String]) = {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
     val inputDir = inputDirOpt.getOrElse(new File(Class.forName("org.chrisjr.corpora.Corpus").getResource("sample-texts").toURI))
     val outputCorpusFile = if (args.length > 1) Some(new File(args(1))) else None
