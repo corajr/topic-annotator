@@ -9,8 +9,9 @@ import scala.collection.mutable
 import scala.util.{ Try, Success, Failure }
 import java.io.FileNotFoundException
 import java.net.URI
-
 import MetadataCollection._
+import com.typesafe.scalalogging.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 case class Corpus(documents: GenSeq[Document], transformers: Seq[CorpusTransformer] = Seq()) {
   def transform(newTransformers: Seq[CorpusTransformer]): Corpus = {
@@ -24,19 +25,23 @@ case class Corpus(documents: GenSeq[Document], transformers: Seq[CorpusTransform
 }
 
 object Corpus {
+  val logger = Logger(LoggerFactory.getLogger("topic-annotator"))
+
   val textFilenameFilter = new java.io.FilenameFilter { def accept(dir: File, name: String) = name.toLowerCase.endsWith(".txt") }
 
   def fromDir(dir: File): Try[Corpus] = {
     if (!dir.exists() || !dir.isDirectory()) return Failure(new FileNotFoundException(s"${dir.getPath} does not exist or is not a directory."))
 
+    val dirUri = dir.toURI
     val metadataColl = MetadataCollection.fromDir(dir)
     for {
       fileList <- Try(dir.listFiles(textFilenameFilter))
       documents = fileList.map { y: File =>
-        Document.fromTextFile(y, metadata = metadataColl.getOrElse(y.toURL, Metadata.basicData(y)))
+        val uri = dirUri.relativize(y.toURI)
+        Document.fromTextFile(y, metadata = metadataColl.getOrElse(uri, Metadata.basicData(y)))
       }
       successes = documents.collect { case Success(x) => x }
-      _ = (documents.collect { case Failure(e) => e.getStackTraceString }).foreach { println(_) }
+      _ = (documents.collect { case Failure(e) => e.getStackTraceString }).foreach(logger.error(_))
     } yield Corpus(successes)
   }
 }

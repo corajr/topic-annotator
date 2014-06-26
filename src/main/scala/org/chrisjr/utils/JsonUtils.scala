@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 
 import java.io.File
 import java.io.PrintWriter
-import java.net.URL
+import java.net.URI
 
 import org.chrisjr.corpora._
 import org.chrisjr.topics._
@@ -16,9 +16,9 @@ import play.api.libs.json._
 object JsonUtils {
   import MetadataCollection._
 
-  val uriReads: Reads[URL] = __.read[String].map(x => new URL(x))
-  val uriWrites: Writes[URL] = (__.write[String]).contramap({ x: URL => x.toString })
-  implicit val uriFormat: Format[URL] = Format(uriReads, uriWrites)
+  val uriReads: Reads[URI] = __.read[String].map(URI.create _)
+  val uriWrites: Writes[URI] = (__.write[String]).contramap({ x: URI => x.toString })
+  implicit val uriFormat: Format[URI] = Format(uriReads, uriWrites)
 
   implicit object metadataFormat extends Format[Metadata] {
     def writes(metadata: Metadata) = {
@@ -37,7 +37,7 @@ object JsonUtils {
       JsObject(mc.map(x => x._1.toString -> JsObject(x._2.fields.toSeq)).toSeq)
     }
     def reads(json: JsValue): JsResult[MetadataCollection] = {
-      JsSuccess(json.as[JsObject].fields.map(x => new URL(x._1) -> x._2.as[Metadata]).toMap[URL, Metadata])
+      JsSuccess(json.as[JsObject].fields.map(x => URI.create(x._1) -> x._2.as[Metadata]).toMap[URI, Metadata])
     }
   }
 

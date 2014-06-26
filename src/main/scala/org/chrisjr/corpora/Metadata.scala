@@ -5,7 +5,8 @@ import com.github.tototoshi.csv._
 import scala.collection._
 import scala.io.Source
 import java.io.File
-import java.net.{URI, URL}
+import java.nio.file.{Files, Paths}
+import java.net.URI
 import scala.util.Try
 import org.chrisjr.utils.JsonUtils
 
@@ -20,7 +21,7 @@ object Metadata {
 }
 
 object MetadataCollection {
-  type MetadataCollection = Map[URL, Metadata]
+  type MetadataCollection = Map[URI, Metadata]
 
   implicit class DirWithFind(dir: File) {
     def findFirst(filter: java.io.FilenameFilter): Option[File] = {
@@ -39,12 +40,16 @@ object MetadataCollection {
     new MetadataHandler {
       val fnameFilter = mkFilter(_.toLowerCase.endsWith("metadata.csv"))
       def parse(file: File) = {
+        val parentPath = file.getParentFile.toPath
+        val parentUri = parentPath.toUri
         val reader = CSVReader.open(file)
         empty ++ ((for {
           row <- reader.allWithHeaders
-          url = new File(file.getParentFile, row.getOrElse("filename", "")).toURL
+          filepath <- row.get("filename")
+          filename = Paths.get(filepath).getFileName()
+          uri = parentUri.relativize(parentPath.resolve(filename).toUri)
           metadata = row.mapValues(JsString)
-        } yield url -> Metadata(emptyFields ++ metadata)).toMap[URL, Metadata])
+        } yield uri -> Metadata(emptyFields ++ metadata)).toMap[URI, Metadata])
       }
     },
     new MetadataHandler {
@@ -56,13 +61,13 @@ object MetadataCollection {
         val source = Source.fromFile(file)
         val json = Json.parse(source.map(_.toByte).toArray)
         source.close()
-        empty ++ json.as[Map[URL, Metadata]]
+        empty ++ json.as[Map[URI, Metadata]]
       }
     })
 
   def emptyFields = mutable.HashMap[String, JsValue with Serializable]()
   def noMetadata = Metadata(emptyFields)
-  def empty = mutable.HashMap[URL, Metadata]()
+  def empty = mutable.HashMap[URI, Metadata]()
 
   def fromDir(dir: File): MetadataCollection = (for {
     h <- handlers
