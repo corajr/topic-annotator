@@ -5,7 +5,7 @@ import org.scalatest.Matchers._
 import scala.util.{ Try, Success, Failure }
 import scala.util.Random
 import org.chrisjr.corpora._
-import scala.collection.immutable
+import scala.collection.mutable
 import play.api.libs.json._
 import java.nio.file.{Files, Paths}
 import org.chrisjr.topics._
@@ -13,7 +13,7 @@ import org.chrisjr.topics._
 class JsonUtilsSpec extends FunSpec {
   import JsonUtils._
 
-  val metadataMap = immutable.HashMap("title" -> JsString("blah"))
+  val metadataMap = mutable.HashMap("title" -> JsString("blah"))
   val sampleMetadata = Metadata(metadataMap)
   describe("The Metadata format") {
     it("should be able to serialize document metadata") {

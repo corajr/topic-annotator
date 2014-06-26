@@ -4,6 +4,7 @@ import java.io.File
 import org.chrisjr.corpora._
 import scala.util.{ Try, Success, Failure }
 import org.chrisjr.topics._
+import org.chrisjr.utils.JsonUtils
 
 /**
  * @author ${user.name}
@@ -12,7 +13,7 @@ object App {
 
   def main(args: Array[String]) = {
     importCorpusAndProcess(args)
-/*    
+    /*    
     val startTime = System.currentTimeMillis()
     val state = MalletStateReader.fromFile(new File("/Users/chrisjr/Desktop/desk/viz_ethno/lda/topic-state.gz"))
     val imis = StateStats.getAllImis(state)
@@ -52,11 +53,19 @@ object App {
       corpus = Util.unpickle[Corpus](outputCorpusFile.get)
     }
 
-    val options = TopicModelParams.defaultFor(MalletLDA)
-    options.numTopics = 50
-    val annotated = MalletLDA.annotate(corpus, options)
+    val annotatedFile = new File(outputCorpusFile.get.getPath + ".mallet")
 
-    Util.pickle(new File(outputCorpusFile.get.getPath + ".mallet"), annotated)
+    val annotated = if (!annotatedFile.exists) {
+      val options = TopicModelParams.defaultFor(MalletLDA)
+      options.numTopics = 50
+      val annotatedCorpus = MalletLDA.annotate(corpus, options)
+      Util.pickle(annotatedFile, annotatedCorpus)
+      annotatedCorpus
+    } else {
+      Util.unpickle[Corpus](annotatedFile)
+    }
+
+    JsonUtils.toPaperMachines(annotated, outputCorpusFile.get.getParentFile)
 
     /*
     for (doc <- annotated.documents) {

@@ -9,12 +9,12 @@ import java.net.{URI, URL}
 import scala.util.Try
 import org.chrisjr.utils.JsonUtils
 
-case class Metadata(fields: immutable.HashMap[String, JsValue with Serializable])
+case class Metadata(fields: mutable.HashMap[String, _ <: JsValue with Serializable])
 
 object Metadata {
   import JsonUtils._
   def basicData(file: File): Metadata = {
-    val fields = immutable.HashMap("itemID" -> JsString(file.toURL.toString))
+    val fields = mutable.HashMap("itemID" -> JsString(file.toURL.toString))
     Metadata(fields)
   }
 }
@@ -60,9 +60,9 @@ object MetadataCollection {
       }
     })
 
-  def emptyFields = immutable.HashMap[String, JsValue with Serializable]()
+  def emptyFields = mutable.HashMap[String, JsValue with Serializable]()
   def noMetadata = Metadata(emptyFields)
-  def empty = immutable.HashMap[URL, Metadata]()
+  def empty = mutable.HashMap[URL, Metadata]()
 
   def fromDir(dir: File): MetadataCollection = (for {
     h <- handlers
