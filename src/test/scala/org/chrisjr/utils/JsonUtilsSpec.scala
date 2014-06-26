@@ -2,10 +2,13 @@ package org.chrisjr.utils
 
 import org.scalatest._
 import org.scalatest.Matchers._
+import scala.util.{ Try, Success, Failure }
 import scala.util.Random
 import org.chrisjr.corpora._
 import scala.collection.immutable
 import play.api.libs.json._
+import java.nio.file.{Files, Paths}
+import org.chrisjr.topics._
 
 class JsonUtilsSpec extends FunSpec {
   import JsonUtils._
@@ -39,6 +42,24 @@ class JsonUtilsSpec extends FunSpec {
       val topics2 = base64ToTopics(output)
       topics shouldEqual topics2
 
+    }
+  }
+
+}
+
+class VizOutputSpec extends FunSpec with CorpusFixture {
+  describe("The Paper Machines output") {
+    it("should fail with an unannotated corpus") {
+      val dir = Files.createTempDirectory("pm")
+      val attempt = Try(JsonUtils.toPaperMachines(corpus, dir.toFile))
+      attempt shouldBe 'failure
+    }
+
+    it("should work using an annotated corpus") {
+      val annotated = MalletLDA.annotate(corpus)
+//      val dir = Files.createTempDirectory("pm")
+      val dir = Paths.get("/Users/chrisjr/Desktop/")
+      JsonUtils.toPaperMachines(annotated, dir.toFile)
     }
   }
 }

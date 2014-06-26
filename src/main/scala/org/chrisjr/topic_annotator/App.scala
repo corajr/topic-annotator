@@ -11,12 +11,14 @@ import org.chrisjr.topics._
 object App {
 
   def main(args: Array[String]) = {
-    //    importCorpusAndProcess(args)
+    importCorpusAndProcess(args)
+/*    
     val startTime = System.currentTimeMillis()
     val state = MalletStateReader.fromFile(new File("/Users/chrisjr/Desktop/desk/viz_ethno/lda/topic-state.gz"))
     val imis = StateStats.getAllImis(state)
-        
+
     println(s"${(System.currentTimeMillis() - startTime) / 1000.0} seconds.")
+    */
   }
 
   def importCorpusAndProcess(args: Array[String]) = {

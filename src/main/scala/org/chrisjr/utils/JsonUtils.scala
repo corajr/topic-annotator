@@ -1,20 +1,24 @@
 package org.chrisjr.utils
 
-import play.api.libs.json._
-import play.api.libs.json.Reads._
-import play.api.libs.functional.syntax._
+import java.nio.file.{ Paths, Files }
+import java.nio.charset.StandardCharsets
 
-import sun.misc.BASE64Encoder
-import java.net.URI
+import java.io.File
+import java.io.PrintWriter
+import java.net.URL
 
 import org.chrisjr.corpora._
+import org.chrisjr.topics._
+
+import play.api.libs.functional.syntax.toContraFunctorOps
+import play.api.libs.json._
 
 object JsonUtils {
   import MetadataCollection._
 
-  val uriReads: Reads[URI] = __.read[String].map(URI.create _)
-  val uriWrites: Writes[URI] = (__.write[String]).contramap({ x: URI => x.toString })
-  implicit val uriFormat: Format[URI] = Format(uriReads, uriWrites)
+  val uriReads: Reads[URL] = __.read[String].map(x => new URL(x))
+  val uriWrites: Writes[URL] = (__.write[String]).contramap({ x: URL => x.toString })
+  implicit val uriFormat: Format[URL] = Format(uriReads, uriWrites)
 
   implicit object metadataFormat extends Format[Metadata] {
     def writes(metadata: Metadata) = {
@@ -33,8 +37,18 @@ object JsonUtils {
       JsObject(mc.map(x => x._1.toString -> JsObject(x._2.fields.toSeq)).toSeq)
     }
     def reads(json: JsValue): JsResult[MetadataCollection] = {
-      JsSuccess(json.as[JsObject].fields.map(x => URI.create(x._1) -> x._2.as[Metadata]).toMap[URI, Metadata])
+      JsSuccess(json.as[JsObject].fields.map(x => new URL(x._1) -> x._2.as[Metadata]).toMap[URL, Metadata])
     }
+  }
+
+  def toSerializableJson[T](o: T)(implicit tjs: Writes[T]): JsValue with Serializable = {
+    val value = Json.toJson(o)
+    if (value.isInstanceOf[JsString]) value.asInstanceOf[JsString]
+    else if (value.isInstanceOf[JsNumber]) value.asInstanceOf[JsNumber]
+    else if (value.isInstanceOf[JsBoolean]) value.asInstanceOf[JsBoolean]
+    else if (value.isInstanceOf[JsObject]) value.asInstanceOf[JsObject]
+    else if (value.isInstanceOf[JsArray]) value.asInstanceOf[JsArray]
+    else JsNull
   }
 
   lazy val b64enc = new sun.misc.BASE64Encoder()
@@ -50,5 +64,53 @@ object JsonUtils {
     val topics = new Array[Float](bb.capacity() / 4)
     bb.asFloatBuffer().get(topics)
     topics
+  }
+
+  /**
+   * @param corpus the corpus with
+   * @param dir
+   */
+  def toPaperMachines(corpus: Corpus, dir: File) = {
+    val stateAnnotatorOpt = corpus.transformers.find(_.isInstanceOf[StateAnnotator])
+    require(stateAnnotatorOpt.nonEmpty, "Corpus has not been annotated with topics!")
+
+    import StateAnnotator._
+
+    val state = stateAnnotatorOpt.get.asInstanceOf[StateAnnotator].state
+    implicit val vocab = corpus.vocab
+
+    val numericVocab = vocab.zipWithIndex.toMap
+
+    val topicLabels = state.topicLabels
+    val imis = StateStats.getAllImis(state)
+
+    val topicLabelObjs = Json.arr(
+      for {
+        topic <- 0 until state.topicsN
+        word <- topicLabels(topic)
+        i = numericVocab(word)
+        prob = state.tw(topic)(i)
+        imi = imis(topic)(i)
+      } yield Json.obj("text" -> word, "prob" -> prob, "imi" -> imi))
+
+    val metadata = JsObject(corpus.documents.map { x =>
+      x.metadata.fields("itemID").as[String] -> Json.toJson(x.metadata)
+    }.seq)
+
+    val data = Json.obj("TOPIC_LABELS" -> topicLabelObjs, "DOC_METADATA" -> metadata)
+
+    val dirPath = Paths.get(dir.toURI)
+    val dataFile = dirPath.resolve("js").resolve("mallet_data.js")
+    dataFile.getParent.toFile.mkdirs()
+
+    Files.write(dataFile, ("var data=" + Json.stringify(data) + ";").getBytes(StandardCharsets.UTF_8))
+
+    val textPath = dirPath.resolve("js").resolve("texts")
+    textPath.toFile.mkdirs()
+    for (doc <- corpus.documents) {
+      val itemID = doc.metadata.fields("itemID").as[String]
+      val docFile = textPath.resolve(itemID)
+      Files.write(docFile, doc.topicsHTML.getBytes(StandardCharsets.UTF_8))
+    }
   }
 }

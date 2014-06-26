@@ -13,7 +13,7 @@ object StateAnnotator {
     lazy val dt = state.docTopics.normalized
     lazy val tw = state.topicTypes.normalized
 
-    def topicLabels(vocab: Seq[String], topN: Int = 5): Map[Int, Seq[String]] = {
+    def topicLabels(implicit vocab: Seq[String], topN: Int = 5): Map[Int, Seq[String]] = {
       (for {
         i <- 0 to tw.keys.max;
         label = tw(i).toSeq.sortBy(_._2).reverse.take(topN).unzip._1.map(vocab)
