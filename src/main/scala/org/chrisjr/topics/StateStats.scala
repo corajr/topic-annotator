@@ -5,12 +5,10 @@ import scala.collection.mutable
 object StateStats {
   val ln2 = math.log(2)
   def log2(d: Double): Double = math.log(d) / ln2
-  def normalize(a: Iterable[Double]): Array[Double] = {
-    val total = a.sum
-    a.map(_ / total).toArray
-  }
   def entropy(a: Iterable[Double]): Double = {
-    -(normalize(a).map { x => x * log2(x) }).sum
+    val total = a.sum
+    val normalized = a.collect { case x if x > 0.0 => x / total }.toArray
+    -(normalized.map { x => x * log2(x) }).sum
   }
 
   /**
