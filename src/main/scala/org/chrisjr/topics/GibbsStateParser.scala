@@ -33,11 +33,17 @@ class GibbsState extends Serializable {
   val docTopics = SparseMatrix(0)
   val topicTypes = SparseMatrix(0)
   val assignments = mutable.ArrayBuffer[Assignment]()
+  var topicsN = 0
+  var wordsN = 0
+  var docsN = 0
 
   def add(a: Assignment) = {
     assignments += a
     docTopics(a.doc)(a.topic) += 1
     topicTypes(a.topic)(a.word) += 1
+    if (a.topic == topicsN) topicsN = a.topic + 1
+    if (a.word == wordsN) wordsN = a.word + 1
+    if (a.doc == docsN) docsN = a.doc + 1
   }
 }
 
