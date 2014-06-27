@@ -93,14 +93,16 @@ object JsonUtils {
         imi = imis(topic)(i)
       } yield Json.obj("text" -> word, "prob" -> prob, "imi" -> imi))
 
-    def dtAsString(doc: Int) = {
-      val topics = state.dt(doc)
-      topicsToBase64((0 until state.topicsN).map(topics.getOrElse(_, 0.0).toFloat).toArray)
+    def dtAsString(doc: Int): Option[String] = {
+      state.dt.get(doc).map { topics =>
+      	topicsToBase64((0 until state.topicsN).map(topics.getOrElse(_, 0.0).toFloat).toArray)
+      }
     }
 
     val metadata = JsObject(corpus.documents.seq.view.zipWithIndex.map { case (x, i) =>
       val m = collection.mutable.HashMap[String, JsValue with Serializable]()
-      m ++= x.metadata.fields + ("topics" -> JsString(dtAsString(i)))
+      m ++= x.metadata.fields
+      dtAsString(i).foreach { t => m += ("topics" -> JsString(t)) }
       val itemID = m("itemID").as[String]
       itemID -> Json.toJson(Metadata(m))
     })
@@ -115,7 +117,7 @@ object JsonUtils {
 
     val textPath = dirPath.resolve("js").resolve("texts")
     textPath.toFile.mkdirs()
-    for (doc <- corpus.documents) {
+    for (doc <- corpus.documents if doc.tokens.size > 0) {
       val itemID = doc.metadata.fields("itemID").as[String]
       val docFile = textPath.resolve(itemID)
       Files.write(docFile, doc.topicsHTML.getBytes(StandardCharsets.UTF_8))
