@@ -56,7 +56,7 @@ object JsonUtils {
   def topicsToBase64(topics: Array[Float]): String = {
     val bb = java.nio.ByteBuffer.allocate(topics.length * 4)
     bb.asFloatBuffer().put(topics)
-    b64enc.encode(bb)
+    b64enc.encode(bb).replaceAll("\n","")
   }
 
   def base64ToTopics(s: String): Array[Float] = {
@@ -93,9 +93,17 @@ object JsonUtils {
         imi = imis(topic)(i)
       } yield Json.obj("text" -> word, "prob" -> prob, "imi" -> imi))
 
-    val metadata = JsObject(corpus.documents.map { x =>
-      x.metadata.fields("itemID").as[String] -> Json.toJson(x.metadata)
-    }.seq)
+    def dtAsString(doc: Int) = {
+      val topics = state.dt(doc)
+      topicsToBase64((0 until state.topicsN).map(topics.getOrElse(_, 0.0).toFloat).toArray)
+    }
+
+    val metadata = JsObject(corpus.documents.seq.view.zipWithIndex.map { case (x, i) =>
+      val m = collection.mutable.HashMap[String, JsValue with Serializable]()
+      m ++= x.metadata.fields + ("topics" -> JsString(dtAsString(i)))
+      val itemID = m("itemID").as[String]
+      itemID -> Json.toJson(Metadata(m))
+    })
 
     val data = Json.obj("TOPIC_LABELS" -> topicLabelObjs, "DOC_METADATA" -> metadata)
 

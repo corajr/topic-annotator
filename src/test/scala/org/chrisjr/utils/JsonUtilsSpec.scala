@@ -57,8 +57,8 @@ class VizOutputSpec extends FunSpec with CorpusFixture {
 
     it("should work using an annotated corpus") {
       val annotated = MalletLDA.annotate(corpus)
-//      val dir = Files.createTempDirectory("pm")
-      val dir = Paths.get("/Users/chrisjr/Desktop/")
+      val dir = Files.createTempDirectory("pm")
+//      val dir = Paths.get("/Users/chrisjr/Desktop/")
       JsonUtils.toPaperMachines(annotated, dir.toFile)
     }
   }
