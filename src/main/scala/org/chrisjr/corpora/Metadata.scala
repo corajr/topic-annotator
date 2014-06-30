@@ -15,7 +15,7 @@ case class Metadata(fields: mutable.HashMap[String, _ <: JsValue with Serializab
 object Metadata {
   import JsonUtils._
   def basicData(file: File): Metadata = {
-    val fields = mutable.HashMap("itemID" -> JsString(file.toURL.toString))
+    val fields = mutable.HashMap("itemID" -> JsString(file.toURI.toString))
     Metadata(fields)
   }
 }

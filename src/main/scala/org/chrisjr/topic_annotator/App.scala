@@ -11,7 +11,7 @@ import org.chrisjr.utils.JsonUtils
  */
 object App {
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]) {
     importCorpusAndProcess(args)
     /*    
     val startTime = System.currentTimeMillis()
@@ -42,6 +42,7 @@ object App {
       val transformers = Seq(LowercaseTransformer,
         new MinLengthRemover(4),
         StopwordRemover.forLang("en").get,
+        StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/stopwords.txt")).get,
         new ScoreTransformer(topWords = 5000))
 
       corpus = corpusTry.get.transform(transformers)
@@ -65,12 +66,7 @@ object App {
       Util.unpickle[Corpus](annotatedFile)
     }
 
-    JsonUtils.toPaperMachines(annotated, outputCorpusFile.get.getParentFile)
-
-    /*
-    for (doc <- annotated.documents) {
-      println(doc.topicsHTML)
-    }
-    */
+    val outDir = outputCorpusFile.get.getParentFile
+    JsonUtils.toPaperMachines(annotated, new File("/Users/chrisjr/Desktop/success"))
   }
 }

@@ -18,6 +18,7 @@ object MalletLDA extends TopicModel {
     val args = collection.mutable.ArrayBuffer[String]()
     args ++= Seq("--input", options.corpusFile.getCanonicalPath)
     args ++= Seq("--num-topics", options.numTopics.toString)
+    args ++= Seq("--optimize-interval", 20.toString)
     args ++= Seq("--output-state", options.stateFile.getCanonicalPath)
 
     takeOverLogging

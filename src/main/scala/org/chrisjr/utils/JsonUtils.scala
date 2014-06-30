@@ -2,16 +2,14 @@ package org.chrisjr.utils
 
 import java.nio.file.{ Paths, Files }
 import java.nio.charset.StandardCharsets
-
 import java.io.File
 import java.io.PrintWriter
 import java.net.URI
-
 import org.chrisjr.corpora._
 import org.chrisjr.topics._
-
 import play.api.libs.functional.syntax.toContraFunctorOps
 import play.api.libs.json._
+import java.nio.ByteOrder
 
 object JsonUtils {
   import MetadataCollection._
@@ -55,12 +53,14 @@ object JsonUtils {
   lazy val b64dec = new sun.misc.BASE64Decoder()
   def topicsToBase64(topics: Array[Float]): String = {
     val bb = java.nio.ByteBuffer.allocate(topics.length * 4)
+    bb.order(ByteOrder.LITTLE_ENDIAN)
     bb.asFloatBuffer().put(topics)
-    b64enc.encode(bb).replaceAll("\n","")
+    b64enc.encode(bb).replaceAll("\n", "")
   }
 
   def base64ToTopics(s: String): Array[Float] = {
     val bb = b64dec.decodeBufferToByteBuffer(s)
+    bb.order(ByteOrder.LITTLE_ENDIAN)
     val topics = new Array[Float](bb.capacity() / 4)
     bb.asFloatBuffer().get(topics)
     topics
@@ -77,34 +77,34 @@ object JsonUtils {
     import StateAnnotator._
 
     val state = stateAnnotatorOpt.get.asInstanceOf[StateAnnotator].state
-    implicit val vocab = corpus.vocab
+    val vocab = corpus.vocab
 
     val numericVocab = vocab.zipWithIndex.toMap
 
-    val topicLabels = state.topicLabels
+    val topicLabels = state.topicLabels(vocab, 20)
     val imis = StateStats.getAllImis(state)
 
-    val topicLabelObjs = Json.arr(
-      for {
-        topic <- 0 until state.topicsN
+    val topicLabelObjs = JsObject(
+      (for (topic <- 0 until state.topicsN) yield topic.toString -> JsArray(for {
         word <- topicLabels(topic)
         i = numericVocab(word)
         prob = state.tw(topic)(i)
         imi = imis(topic)(i)
-      } yield Json.obj("text" -> word, "prob" -> prob, "imi" -> imi))
+      } yield Json.obj("text" -> word, "prob" -> prob, "imi" -> imi))))
 
     def dtAsString(doc: Int): Option[String] = {
       state.dt.get(doc).map { topics =>
-      	topicsToBase64((0 until state.topicsN).map(topics.getOrElse(_, 0.0).toFloat).toArray)
+        topicsToBase64((0 until state.topicsN).map(topics.getOrElse(_, 0.0).toFloat).toArray)
       }
     }
 
-    val metadata = JsObject(corpus.documents.seq.view.zipWithIndex.map { case (x, i) =>
-      val m = collection.mutable.HashMap[String, JsValue with Serializable]()
-      m ++= x.metadata.fields
-      dtAsString(i).foreach { t => m += ("topics" -> JsString(t)) }
-      val itemID = m("itemID").as[String]
-      itemID -> Json.toJson(Metadata(m))
+    val metadata = JsObject(corpus.documents.seq.view.zipWithIndex.map {
+      case (x, i) =>
+        val m = collection.mutable.HashMap[String, JsValue with Serializable]()
+        m ++= x.metadata.fields
+        dtAsString(i).foreach { t => m += ("topics" -> JsString(t)) }
+        val itemID = m("itemID").as[String]
+        itemID -> Json.toJson(Metadata(m))
     })
 
     val data = Json.obj("TOPIC_LABELS" -> topicLabelObjs, "DOC_METADATA" -> metadata)

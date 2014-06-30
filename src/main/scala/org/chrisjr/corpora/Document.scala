@@ -2,6 +2,7 @@ package org.chrisjr.corpora
 
 import scala.io.Source
 import java.io._
+import java.net.URI
 import scala.collection.mutable
 import scala.collection.GenSeq
 import scala.util.matching.Regex
@@ -9,7 +10,7 @@ import scala.util.{ Try, Success, Failure }
 import java.nio.charset.Charset
 
 import MetadataCollection._
-case class Document(uri: String, metadata: Metadata = noMetadata, tokens: GenSeq[Token]) {
+case class Document(uri: URI, metadata: Metadata = noMetadata, tokens: GenSeq[Token]) {
   def topicsHTML = {
     val reader = new BufferedReader(
       new InputStreamReader(
@@ -59,12 +60,12 @@ object Document {
 
   def fromTextFile(file: File, encoding: String = "UTF-8", metadata: Metadata = noMetadata): Try[Document] = {
     val source = Source.fromFile(file, encoding)
-    val docTry = Try(Document(uri = file.getPath(), metadata = metadata, tokens = tokensFromLineIterator(source.getLines)))
+    val docTry = Try(Document(uri = file.toURI(), metadata = metadata, tokens = tokensFromLineIterator(source.getLines)))
     source.close
     docTry
   }
 
-  def fromString(uri: String, text: String, metadata: Metadata = noMetadata) = {
-    Try(Document(uri = uri, metadata = metadata, tokens = tokensFromLineIterator(text.split("\n").iterator)))
+  def fromString(uri: URI, text: String, metadata: Metadata = noMetadata) = {
+    Success(Document(uri = uri, metadata = metadata, tokens = tokensFromLineIterator(text.split("\n").iterator)))
   }
 }

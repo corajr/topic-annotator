@@ -5,6 +5,7 @@ import org.scalatest.TryValues
 import org.scalatest.Matchers._
 import java.io.File
 import java.io.FileNotFoundException
+import java.net.URI
 import scala.util.{Try, Success, Failure}
 
 class DocumentSpec extends FunSpec with TryValues {
@@ -16,12 +17,12 @@ class DocumentSpec extends FunSpec with TryValues {
 
   describe("A Document") {
     it("should be empty to start") {
-      val doc = Document(uri = "", tokens = Seq())
+      val doc = Document(uri = URI.create(""), tokens = Seq())
       doc.tokens.size shouldBe 0
     }
     
     it("should be initializable from a string") {
-      val docTry = Document.fromString("test1", "This is a test.")
+      val docTry = Document.fromString(URI.create("test1"), "This is a test.")
       docTry shouldBe 'success
     }
     
