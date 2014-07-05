@@ -10,6 +10,8 @@ import scala.util.{ Try, Success, Failure }
 import java.nio.charset.Charset
 
 import MetadataCollection._
+
+import Metadata._
 case class Document(uri: URI, metadata: Metadata = noMetadata, tokens: GenSeq[Token]) {
   def topicsHTML = {
     val reader = new BufferedReader(

@@ -12,16 +12,17 @@ import org.chrisjr.topics._
 
 class JsonUtilsSpec extends FunSpec {
   import JsonUtils._
+  import Metadata._
 
   val metadataMap = mutable.HashMap("title" -> JsString("blah"))
-  val sampleMetadata = Metadata(metadataMap)
+  val sampleMetadata = Metadata(metadataMap.toSeq)
   describe("The Metadata format") {
     it("should be able to serialize document metadata") {
       val out = Json.toJson(sampleMetadata)
     }
     it("should be able to deserialize document metadata") {
-      val out = Json.toJson(sampleMetadata)
-      val metadata = Json.fromJson[Metadata](out).asOpt
+      val out = Json.toJson(sampleMetadata).toString
+      val metadata = Json.parse(out).asOpt[Metadata]
       metadata should not be empty
       metadata.get shouldBe sampleMetadata
     }

@@ -10,17 +10,16 @@ import java.net.URI
 import scala.util.Try
 import org.chrisjr.utils.JsonUtils
 
-case class Metadata(fields: mutable.HashMap[String, _ <: JsValue with Serializable])
-
 object Metadata {
-  import JsonUtils._
-  def basicData(file: File): Metadata = {
-    val fields = mutable.HashMap("itemID" -> JsString(file.toURI.toString))
-    Metadata(fields)
+  type Metadata = JsObject
+  def apply(xs: Seq[(String, JsValue)]) = JsObject(xs)
+  def basicData(file: File) = {
+    Json.obj("itemID" -> JsString(file.toURI.toString))
   }
 }
 
 object MetadataCollection {
+  import Metadata._
   type MetadataCollection = Map[URI, Metadata]
 
   implicit class DirWithFind(dir: File) {
@@ -49,7 +48,7 @@ object MetadataCollection {
           filename = Paths.get(filepath).getFileName()
           uri = parentUri.relativize(parentPath.resolve(filename).toUri)
           metadata = row.mapValues(JsString)
-        } yield uri -> Metadata(emptyFields ++ metadata)).toMap[URI, Metadata])
+        } yield uri -> Metadata(metadata.toSeq)).toMap[URI, Metadata])
       }
     },
     new MetadataHandler {
@@ -61,12 +60,12 @@ object MetadataCollection {
         val source = Source.fromFile(file)
         val json = Json.parse(source.map(_.toByte).toArray)
         source.close()
-        empty ++ json.as[Map[URI, Metadata]]
+        json.as[Map[URI, Metadata]]
       }
     })
 
   def emptyFields = mutable.HashMap[String, JsValue with Serializable]()
-  def noMetadata = Metadata(emptyFields)
+  def noMetadata = Metadata(emptyFields.toSeq)
   def empty = mutable.HashMap[URI, Metadata]()
 
   def fromDir(dir: File): MetadataCollection = (for {

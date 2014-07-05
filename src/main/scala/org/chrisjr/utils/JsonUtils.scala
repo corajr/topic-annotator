@@ -13,22 +13,11 @@ import java.nio.ByteOrder
 
 object JsonUtils {
   import MetadataCollection._
+  import Metadata._
 
   val uriReads: Reads[URI] = __.read[String].map(URI.create _)
   val uriWrites: Writes[URI] = (__.write[String]).contramap({ x: URI => x.toString })
   implicit val uriFormat: Format[URI] = Format(uriReads, uriWrites)
-
-  implicit object metadataFormat extends Format[Metadata] {
-    def writes(metadata: Metadata) = {
-      JsObject(metadata.fields.toSeq)
-    }
-    def reads(json: JsValue): JsResult[Metadata] = {
-      val fields = json.as[JsObject].fields
-      val serializable = fields.filter(_._2.isInstanceOf[JsValue with Serializable])
-        .map(x => (x._1, x._2.asInstanceOf[JsValue with Serializable]))
-      JsSuccess(Metadata(emptyFields ++ serializable.toMap[String, JsValue with Serializable]))
-    }
-  }
 
   implicit object metadataCollectionFormat extends Format[MetadataCollection] {
     def writes(mc: MetadataCollection) = {
@@ -100,11 +89,11 @@ object JsonUtils {
 
     val metadata = JsObject(corpus.documents.seq.view.zipWithIndex.map {
       case (x, i) =>
-        val m = collection.mutable.HashMap[String, JsValue with Serializable]()
+        val m = collection.mutable.HashMap[String, JsValue]()
         m ++= x.metadata.fields
         dtAsString(i).foreach { t => m += ("topics" -> JsString(t)) }
         val itemID = m("itemID").as[String]
-        itemID -> Json.toJson(Metadata(m))
+        itemID -> Metadata(m.toSeq)
     })
 
     val data = Json.obj("TOPIC_LABELS" -> topicLabelObjs, "DOC_METADATA" -> metadata)
@@ -118,7 +107,7 @@ object JsonUtils {
     val textPath = dirPath.resolve("js").resolve("texts")
     textPath.toFile.mkdirs()
     for (doc <- corpus.documents if doc.tokens.size > 0) {
-      val itemID = doc.metadata.fields("itemID").as[String]
+      val itemID = (doc.metadata \ "itemID").as[String]
       val docFile = textPath.resolve(itemID)
       Files.write(docFile, doc.topicsHTML.getBytes(StandardCharsets.UTF_8))
     }
