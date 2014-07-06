@@ -6,7 +6,7 @@ import java.io.File
 
 //import scala.util.{Try, Success, Failure}
 
-class StopwordRemoverSpec extends FunSpec with CorpusFixture with TryValues with CheckTokens {
+class StopwordRemoverSpec extends FunSpec with CorpusFixture with TryValues with CheckTokens with Deserializable {
   val stoplistDir = StopwordRemover.stoplistDir
 
   describe("A StopwordRemover") {
@@ -23,6 +23,7 @@ class StopwordRemoverSpec extends FunSpec with CorpusFixture with TryValues with
       it("should throw an exception on an invalid code") {
         StopwordRemover.forLang("zz") shouldBe 'failure
       }
+      it should behave like serializable(StopwordRemover.forLang("en").get, corpus)
     }
   }
 }
