@@ -4,6 +4,8 @@ import scala.util.matching.Regex
 import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.JavaConversions._
 
+import scala.util.{ Try, Success, Failure }
+
 trait CorpusTransformer extends Serializable {
   def apply(corpus: Corpus) = Corpus(corpus.documents.map(process), corpus.transformers.:+(this))
   def process(document: Document): Document
@@ -33,11 +35,45 @@ object NoopTransformer extends CorpusTransformer { def process(doc: Document) = 
 
 object LowercaseTransformer extends TokenTransformer(_.toLowerCase)
 
+object Snowball {
+  import org.tartarus.snowball._
+
+  val stemmers = collection.mutable.Map[String, Option[SnowballStemmer]]()
+
+  def getStemmerFor(lang: String): Option[SnowballStemmer] = {
+    stemmers.getOrElseUpdate(lang, {
+      val findClass = Try(Class.forName("org.tartarus.snowball.ext." + lang + "Stemmer"))
+      findClass match {
+        case Success(stemClass) =>
+          Some(stemClass.newInstance().asInstanceOf[SnowballStemmer])
+        case Failure(e) =>
+          None
+      }
+    })
+  }
+
+  def mkStemFunc(stemmer: SnowballStemmer) = {
+    { original: String =>
+      stemmer.setCurrent(original)
+      stemmer.stem()
+      stemmer.getCurrent()
+    }
+  }
+
+  def getStemFuncFor(lang: String) = {
+    val stemmerOpt = getStemmerFor(lang)
+    if (stemmerOpt.isEmpty) throw new ClassNotFoundException(s"No stemmer found for $lang")
+    mkStemFunc(stemmerOpt.get)
+  }
+}
+
+class SnowballTransformer(lang: String) extends TokenTransformer(Snowball.getStemFuncFor(lang))
+
 class RegexTransformer(regex: Regex, sub: String) extends TokenTransformer({ x =>
   regex.replaceAllIn(x, sub)
 })
 
-class MinLengthRemover(minLength: Int) extends TokenFilter({ x => x.length >= minLength})
+class MinLengthRemover(minLength: Int) extends TokenFilter({ x => x.length >= minLength })
 
 trait PreprocessingTransformer extends CorpusTransformer {
   def preprocess(corpus: Corpus): Unit

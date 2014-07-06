@@ -50,6 +50,13 @@ class CorpusTransformerSpec extends FunSpec with CorpusFixture with CheckTokens 
     }
   }
 
+  describe("A SnowballTransformer") {
+    it("should stem tokens by language") {
+      val snowballTransformer = new SnowballTransformer("english")
+      checkTokens(corpus, snowballTransformer, { x => !x.endsWith("tion") })
+    }
+  }
+  
   describe("A ScoreTransformer") {
     describe("(if topWords is set)") {
       it("should reduce vocabulary to no more than a specified size") {

@@ -42,7 +42,9 @@ object App {
       val transformers = Seq(LowercaseTransformer,
         new MinLengthRemover(4),
         StopwordRemover.forLang("en").get,
-        StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/stopwords.txt")).get,
+        StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get,
+        StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get,
+        new SnowballTransformer("english"),
         new ScoreTransformer(topWords = 5000))
 
       corpus = corpusTry.get.transform(transformers)
@@ -57,9 +59,11 @@ object App {
     val annotatedFile = new File(outputCorpusFile.get.getPath + ".mallet")
 
     val annotated = if (!annotatedFile.exists) {
-      val options = TopicModelParams.defaultFor(MalletLDA)
-      options.numTopics = 50
-      val annotatedCorpus = MalletLDA.annotate(corpus, options)
+//      val options = TopicModelParams.defaultFor(MalletLDA)
+//      options.numTopics = 50
+//      val annotatedCorpus = MalletLDA.annotate(corpus, options)
+      val options = TopicModelParams.defaultFor(HDP)
+      val annotatedCorpus = HDP.annotate(corpus, options)
       Util.pickle(annotatedFile, annotatedCorpus)
       annotatedCorpus
     } else {
