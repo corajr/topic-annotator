@@ -40,7 +40,24 @@ object Snowball {
 
   val stemmers = collection.mutable.Map[String, Option[SnowballStemmer]]()
 
-  def getStemmerFor(lang: String): Option[SnowballStemmer] = {
+  // these are all the snowball languages available
+  val iso639 = Map("ru" -> "russian",
+    "fr" -> "french",
+    "en" -> "english",
+    "pt" -> "portuguese",
+    "no" -> "norwegian",
+    "sv" -> "swedish",
+    "de" -> "german",
+    "tr" -> "turkish",
+    "it" -> "italian",
+    "da" -> "danish",
+    "fi" -> "finnish",
+    "hu" -> "hungarian",
+    "es" -> "spanish",
+    "nl" -> "dutch")
+
+  def getStemmerFor(language: String): Option[SnowballStemmer] = {
+    val lang = if (iso639.contains(language)) iso639(language) else language
     stemmers.getOrElseUpdate(lang, {
       val findClass = Try(Class.forName("org.tartarus.snowball.ext." + lang + "Stemmer"))
       findClass match {

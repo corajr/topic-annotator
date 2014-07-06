@@ -1,7 +1,9 @@
 package org.chrisjr.corpora
 
-import org.scalatest.FunSpec
+import org.scalatest._
 import org.scalatest.Matchers._
+import scala.util.{ Try, Success, Failure }
+
 
 trait CheckTokens {
   def checkTokens(corpus: Corpus, transformer: CorpusTransformer, f: String => Boolean) = {
@@ -15,7 +17,7 @@ trait CheckTokens {
   }
 }
 
-class CorpusTransformerSpec extends FunSpec with CorpusFixture with CheckTokens {
+class CorpusTransformerSpec extends FunSpec with CorpusFixture with CheckTokens with TryValues {
   describe("A CorpusTransformer") {
     it("should return a new corpus") {
       val transformer = NoopTransformer
@@ -51,12 +53,21 @@ class CorpusTransformerSpec extends FunSpec with CorpusFixture with CheckTokens 
   }
 
   describe("A SnowballTransformer") {
-    it("should stem tokens by language") {
+    it("should stem tokens with the full name of a language") {
       val snowballTransformer = new SnowballTransformer("english")
       checkTokens(corpus, snowballTransformer, { x => !x.endsWith("tion") })
     }
+    it("should stem tokens with the ISO-639 code of a language") {
+      val snowballTransformer = new SnowballTransformer("en")
+      checkTokens(corpus, snowballTransformer, { x => !x.endsWith("tion") })
+    }
+    it("should throw an exception with an invalid language") {
+      val transformerTry = Try(new SnowballTransformer("klingon"))
+      transformerTry shouldBe 'failure
+      transformerTry.failure.exception.getMessage shouldBe "No stemmer found for klingon"
+    }
   }
-  
+
   describe("A ScoreTransformer") {
     describe("(if topWords is set)") {
       it("should reduce vocabulary to no more than a specified size") {
