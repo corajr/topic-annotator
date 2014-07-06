@@ -38,8 +38,6 @@ object LowercaseTransformer extends TokenTransformer(_.toLowerCase)
 object Snowball {
   import org.tartarus.snowball._
 
-  val stemmers = collection.mutable.Map[String, Option[SnowballStemmer]]()
-
   // these are all the snowball languages available
   val iso639 = Map("ru" -> "russian",
     "fr" -> "french",
@@ -56,31 +54,32 @@ object Snowball {
     "es" -> "spanish",
     "nl" -> "dutch")
 
-  def getStemmerFor(language: String): Option[SnowballStemmer] = {
-    val lang = if (iso639.contains(language)) iso639(language) else language
-    stemmers.getOrElseUpdate(lang, {
-      val findClass = Try(Class.forName("org.tartarus.snowball.ext." + lang + "Stemmer"))
-      findClass match {
-        case Success(stemClass) =>
-          Some(stemClass.newInstance().asInstanceOf[SnowballStemmer])
-        case Failure(e) =>
-          None
-      }
-    })
-  }
-
-  def mkStemFunc(stemmer: SnowballStemmer) = {
-    { original: String =>
-      stemmer.setCurrent(original)
+  class LocalStemmer(language: String) extends Serializable {
+    @transient lazy val stemmer: SnowballStemmer = getSnowballStemmer(language)
+    def stem(word: String) = {
+      stemmer.setCurrent(word)
       stemmer.stem()
       stemmer.getCurrent()
     }
   }
 
+  def getSnowballStemmer(language: String): SnowballStemmer = {
+    val lang = if (iso639.contains(language)) iso639(language) else language
+    val findClass = Try(Class.forName("org.tartarus.snowball.ext." + lang + "Stemmer"))
+    findClass match {
+      case Success(stemClass) =>
+        stemClass.newInstance().asInstanceOf[SnowballStemmer]
+      case Failure(e) =>
+        throw new ClassNotFoundException(s"No stemmer found for $language")
+    }
+  }
+
   def getStemFuncFor(lang: String) = {
-    val stemmerOpt = getStemmerFor(lang)
-    if (stemmerOpt.isEmpty) throw new ClassNotFoundException(s"No stemmer found for $lang")
-    mkStemFunc(stemmerOpt.get)
+    val stemmer = new LocalStemmer(lang)
+
+    if (!iso639.contains(lang) && !iso639.values.contains(lang))
+      throw new ClassNotFoundException(s"No stemmer found for $lang")
+    stemmer.stem _
   }
 }
 
