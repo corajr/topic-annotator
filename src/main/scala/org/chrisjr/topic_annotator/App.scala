@@ -45,7 +45,7 @@ object App {
         StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get,
         StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get,
         new SnowballTransformer("english"),
-        new ScoreTransformer(topWords = 5000))
+        new ScoreTransformer(topWords = 10000, minDf = 10))
 
       corpus = corpusTry.get.transform(transformers)
       val elapsedTime = System.currentTimeMillis() - startTime
@@ -59,11 +59,11 @@ object App {
     val annotatedFile = new File(outputCorpusFile.get.getPath + ".mallet")
 
     val annotated = if (!annotatedFile.exists) {
-//      val options = TopicModelParams.defaultFor(MalletLDA)
-//      options.numTopics = 50
-//      val annotatedCorpus = MalletLDA.annotate(corpus, options)
-      val options = TopicModelParams.defaultFor(HDP)
-      val annotatedCorpus = HDP.annotate(corpus, options)
+      val options = TopicModelParams.defaultFor(MalletLDA)
+      options.numTopics = 30
+      val annotatedCorpus = MalletLDA.annotate(corpus, options)
+//      val options = TopicModelParams.defaultFor(HDP)
+//      val annotatedCorpus = HDP.annotate(corpus, options)
       Util.pickle(annotatedFile, annotatedCorpus)
       annotatedCorpus
     } else {

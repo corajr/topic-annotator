@@ -85,6 +85,11 @@
     	<artifactId>snowball-stemmer</artifactId>
     	<version>1.3.0.581.1</version>
     </dependency>
+    <dependency>
+    	<groupId>de.uni-leipzig.informatik.asv</groupId>
+    	<artifactId>hdp</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
   <build>
