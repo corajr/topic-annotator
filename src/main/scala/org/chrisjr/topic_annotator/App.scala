@@ -25,52 +25,54 @@ object App {
   def importCorpusAndProcess(args: Array[String]) = {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
     val inputDir = inputDirOpt.getOrElse(new File(Class.forName("org.chrisjr.corpora.Corpus").getResource("sample-texts").toURI))
-    val outputCorpusFile = if (args.length > 1) Some(new File(args(1))) else None
+    val corpusFile = if (args.length > 1) Some(new File(args(1))) else None
+    val preprocessedCorpusFile = if (args.length > 2) Some(new File(args(2))) else None
+    val annotatedFile = new File(preprocessedCorpusFile.get.getPath + ".mallet")
 
-    var corpus: Corpus = null
-
-    if (outputCorpusFile.isEmpty || outputCorpusFile.forall(!_.exists)) {
-      var startTime = System.currentTimeMillis()
-      var docsN = 0
-      val corpusTry = Corpus.fromDir(inputDir)
-      corpusTry match {
-        case Success(c) =>
-          docsN = c.documents.size; println(s"$docsN documents loaded")
-        case Failure(e) => e.printStackTrace
+    def doOrUnpickle[T <: Serializable](fileOpt: Option[File], block: => T): T = {
+      if (fileOpt.nonEmpty && fileOpt.get.exists) Util.unpickle[T](fileOpt.get)
+      else {
+        val item = block
+        if (fileOpt.nonEmpty) Util.pickle(fileOpt.get, item)
+        item
       }
+    }
 
-      val transformers = Seq(LowercaseTransformer,
-        new MinLengthRemover(4),
-        StopwordRemover.forLang("en").get,
-        StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get,
-        StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get,
-        new SnowballTransformer("english"),
-        new ScoreTransformer(topWords = 10000, minDf = 10))
+    var startTime = System.currentTimeMillis()
+    var docsN = 0
 
-      corpus = corpusTry.get.transform(transformers)
+    val annotated = doOrUnpickle(Some(annotatedFile), {
+      val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
+        val raw = doOrUnpickle(corpusFile, {
+          val corpusTry = Corpus.fromDir(inputDir)
+          val myCorpus = corpusTry.get
+          myCorpus
+        })
+        docsN = raw.documents.size
+        println(s"$docsN documents loaded")
+
+        val transformers = Seq(LowercaseTransformer,
+          new MinLengthRemover(4),
+          StopwordRemover.forLang("en").get,
+          StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get,
+          StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get,
+          new SnowballTransformer("english"),
+          new ScoreTransformer(topWords = 10000, minDf = 10))
+        raw.transform(transformers)
+      })
+
       val elapsedTime = System.currentTimeMillis() - startTime
       println(s"Took ${elapsedTime / 1000.0} seconds (avg. ${elapsedTime.toFloat / docsN} ms per doc).")
 
-      outputCorpusFile foreach { f => Util.pickle(f, corpus) }
-    } else {
-      corpus = Util.unpickle[Corpus](outputCorpusFile.get)
-    }
-
-    val annotatedFile = new File(outputCorpusFile.get.getPath + ".mallet")
-
-    val annotated = if (!annotatedFile.exists) {
       val options = TopicModelParams.defaultFor(MalletLDA)
       options.numTopics = 30
-      val annotatedCorpus = MalletLDA.annotate(corpus, options)
-//      val options = TopicModelParams.defaultFor(HDP)
-//      val annotatedCorpus = HDP.annotate(corpus, options)
-      Util.pickle(annotatedFile, annotatedCorpus)
+      val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
+      //      val options = TopicModelParams.defaultFor(HDP)
+      //      val annotatedCorpus = HDP.annotate(corpus, options)
       annotatedCorpus
-    } else {
-      Util.unpickle[Corpus](annotatedFile)
-    }
+    })
 
-    val outDir = outputCorpusFile.get.getParentFile
-    JsonUtils.toPaperMachines(annotated, new File("/Users/chrisjr/Desktop/success"))
+    val outDir = new File("/Users/chrisjr/Desktop/success")
+    JsonUtils.toPaperMachines(annotated, outDir)
   }
 }

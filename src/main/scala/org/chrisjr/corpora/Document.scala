@@ -14,10 +14,12 @@ import MetadataCollection._
 import Metadata._
 case class Document(uri: URI, metadata: Metadata = noMetadata, tokens: GenSeq[Token]) {
   def topicsHTML = {
+    val file = new File(uri)
+    if (!file.exists) throw new IllegalStateException(s"Could not find file $uri")
     val reader = new BufferedReader(
       new InputStreamReader(
         new FileInputStream(
-          new File(uri)), Charset.forName("UTF-8")))
+          file), Charset.forName("UTF-8")))
     var c = reader.read()
     var i = 0
     val tokenIterator = tokens.iterator

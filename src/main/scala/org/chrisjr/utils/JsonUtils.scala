@@ -7,17 +7,27 @@ import java.io.PrintWriter
 import java.net.URI
 import org.chrisjr.corpora._
 import org.chrisjr.topics._
-import play.api.libs.functional.syntax.toContraFunctorOps
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import java.nio.ByteOrder
+
+import scala.util.Try
 
 object JsonUtils {
   import MetadataCollection._
   import Metadata._
 
-  val uriReads: Reads[URI] = __.read[String].map(URI.create _)
-  val uriWrites: Writes[URI] = (__.write[String]).contramap({ x: URI => x.toString })
-  implicit val uriFormat: Format[URI] = Format(uriReads, uriWrites)
+  implicit object URIReads extends Reads[URI] {
+    def reads(json: JsValue) = json match {
+      case JsString(x) => Try(new URI(x)).map(JsSuccess(_))
+        .getOrElse(JsError(Seq(JsPath() -> Seq(ValidationError("error.expected.validuri")))))
+      case _ => JsError(Seq(JsPath() -> Seq(ValidationError("error.expected.uri"))))
+    }
+  }
+
+  implicit object URIWrites extends Writes[URI] {
+    def writes(uri: URI) = JsString(uri.toString)
+  }
 
   implicit object metadataCollectionFormat extends Format[MetadataCollection] {
     def writes(mc: MetadataCollection) = {
@@ -92,7 +102,7 @@ object JsonUtils {
         val m = collection.mutable.HashMap[String, JsValue]()
         m ++= x.metadata.fields
         dtAsString(i).foreach { t => m += ("topics" -> JsString(t)) }
-        val itemID = m("itemID").as[String]
+        val itemID = m("id").as[Int].toString
         itemID -> Metadata(m.toSeq)
     })
 
@@ -107,9 +117,10 @@ object JsonUtils {
     val textPath = dirPath.resolve("js").resolve("texts")
     textPath.toFile.mkdirs()
     for (doc <- corpus.documents if doc.tokens.size > 0) {
-      val itemID = (doc.metadata \ "itemID").as[String]
+      val itemID = (doc.metadata \ "id").as[Int].toString
       val docFile = textPath.resolve(itemID)
-      Files.write(docFile, doc.topicsHTML.getBytes(StandardCharsets.UTF_8))
+      val html = Try(doc.topicsHTML.getBytes(StandardCharsets.UTF_8))
+      html foreach { bytes => Files.write(docFile, bytes) }
     }
   }
 }
