@@ -1,4 +1,4 @@
-package org.chrisjr.topic_annotator.topic_annotator
+package org.chrisjr.topic_annotator
 
 import java.io.File
 import org.chrisjr.topic_annotator.corpora._
