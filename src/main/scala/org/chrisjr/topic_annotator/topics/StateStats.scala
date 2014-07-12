@@ -1,4 +1,4 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
 import scala.collection.mutable
 

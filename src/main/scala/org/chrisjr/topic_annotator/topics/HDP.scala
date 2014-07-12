@@ -1,6 +1,6 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
-import org.chrisjr.corpora._
+import org.chrisjr.topic_annotator.corpora._
 import CorpusConversions._
 import java.io._
 import de.uni_leipzig.informatik.asv.hdp._

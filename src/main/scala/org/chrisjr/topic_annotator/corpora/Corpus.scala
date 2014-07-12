@@ -1,7 +1,7 @@
 /**
  *
  */
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import java.io.File
 import scala.collection.GenSeq

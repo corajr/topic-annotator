@@ -1,6 +1,6 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
-import org.chrisjr.corpora.Corpus
+import org.chrisjr.topic_annotator.corpora.Corpus
 import java.io.File
 import java.nio.file.Files
 
@@ -25,7 +25,7 @@ object TopicModelParams {
 }
 
 trait TopicModel {
-  val stateReader: org.chrisjr.topics.GibbsStateReader
+  val stateReader: org.chrisjr.topic_annotator.topics.GibbsStateReader
   def trainFrom(corpus: Corpus, options: TopicModelParams): Unit
   def annotate(corpus: Corpus, options: TopicModelParams = TopicModelParams.defaultFor(this)): Corpus = {
     if (!options.stateFile.exists) trainFrom(corpus, options)

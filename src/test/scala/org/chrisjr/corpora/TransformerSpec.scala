@@ -1,4 +1,4 @@
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import org.scalatest._
 import org.scalatest.Matchers._

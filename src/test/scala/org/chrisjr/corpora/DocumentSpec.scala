@@ -1,4 +1,4 @@
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import org.scalatest.FunSpec
 import org.scalatest.TryValues

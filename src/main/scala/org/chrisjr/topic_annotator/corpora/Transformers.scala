@@ -1,4 +1,4 @@
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import scala.util.matching.Regex
 import java.util.concurrent.ConcurrentSkipListSet

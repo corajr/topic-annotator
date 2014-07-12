@@ -1,10 +1,10 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
 import org.scalatest._
 import org.scalatest.Matchers._
-import org.chrisjr.corpora.CorpusFixture
+import org.chrisjr.topic_annotator.corpora.CorpusFixture
 import java.io._
-import org.chrisjr.corpora.Corpus
+import org.chrisjr.topic_annotator.corpora.Corpus
 
 trait TopicTrainer { this: FunSpec =>
   def trainUsing(model: TopicModel, corpus: => Corpus, stateFile: File = File.createTempFile("assignments", null)) = {

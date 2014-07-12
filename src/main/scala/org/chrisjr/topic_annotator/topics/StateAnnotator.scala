@@ -1,6 +1,6 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
-import org.chrisjr.corpora._
+import org.chrisjr.topic_annotator.corpora._
 
 class StateAnnotator(val state: GibbsState) extends CorpusTransformer {
   val assignments = state.assignments.map(_.topic).iterator

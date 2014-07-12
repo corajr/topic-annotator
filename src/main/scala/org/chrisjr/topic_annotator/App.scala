@@ -1,10 +1,10 @@
-package org.chrisjr.topic_annotator
+package org.chrisjr.topic_annotator.topic_annotator
 
 import java.io.File
-import org.chrisjr.corpora._
+import org.chrisjr.topic_annotator.corpora._
 import scala.util.{ Try, Success, Failure }
-import org.chrisjr.topics._
-import org.chrisjr.utils.JsonUtils
+import org.chrisjr.topic_annotator.topics._
+import org.chrisjr.topic_annotator.utils.JsonUtils
 
 /**
  * @author ${user.name}
@@ -24,7 +24,7 @@ object App {
 
   def importCorpusAndProcess(args: Array[String]) = {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
-    val inputDir = inputDirOpt.getOrElse(new File(Class.forName("org.chrisjr.corpora.Corpus").getResource("sample-texts").toURI))
+    val inputDir = inputDirOpt.getOrElse(new File(Class.forName("org.chrisjr.topic_annotator.corpora.Corpus").getResource("sample-texts").toURI))
     val corpusFile = if (args.length > 1) Some(new File(args(1))) else None
     val preprocessedCorpusFile = if (args.length > 2) Some(new File(args(2))) else None
     val annotatedFile = new File(preprocessedCorpusFile.get.getPath + ".mallet")

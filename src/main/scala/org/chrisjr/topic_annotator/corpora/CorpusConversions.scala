@@ -1,4 +1,4 @@
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import java.io._
 import cc.mallet.pipe._

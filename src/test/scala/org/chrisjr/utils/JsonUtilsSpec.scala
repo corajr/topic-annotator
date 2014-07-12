@@ -1,14 +1,14 @@
-package org.chrisjr.utils
+package org.chrisjr.topic_annotator.utils
 
 import org.scalatest._
 import org.scalatest.Matchers._
 import scala.util.{ Try, Success, Failure }
 import scala.util.Random
-import org.chrisjr.corpora._
+import org.chrisjr.topic_annotator.corpora._
 import scala.collection.mutable
 import play.api.libs.json._
 import java.nio.file.{Files, Paths}
-import org.chrisjr.topics._
+import org.chrisjr.topic_annotator.topics._
 
 class JsonUtilsSpec extends FunSpec {
   import JsonUtils._

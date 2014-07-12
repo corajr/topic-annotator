@@ -1,12 +1,12 @@
-package org.chrisjr.utils
+package org.chrisjr.topic_annotator.utils
 
 import java.nio.file.{ Paths, Files }
 import java.nio.charset.StandardCharsets
 import java.io.File
 import java.io.PrintWriter
 import java.net.URI
-import org.chrisjr.corpora._
-import org.chrisjr.topics._
+import org.chrisjr.topic_annotator.corpora._
+import org.chrisjr.topic_annotator.topics._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import java.nio.ByteOrder

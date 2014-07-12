@@ -1,10 +1,10 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
 import org.scalatest.FunSpec
 import org.scalatest.Matchers._
-import org.chrisjr.corpora.CorpusFixture
+import org.chrisjr.topic_annotator.corpora.CorpusFixture
 import java.io.File
-import org.chrisjr.corpora.Corpus
+import org.chrisjr.topic_annotator.corpora.Corpus
 
 trait AnnotatableState { this: FunSpec =>
   def annotateState(corpus: => Corpus, state: => GibbsState) = {

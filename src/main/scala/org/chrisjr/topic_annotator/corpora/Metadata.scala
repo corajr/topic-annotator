@@ -1,4 +1,4 @@
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import play.api.libs.json._
 import com.github.tototoshi.csv._
@@ -8,7 +8,7 @@ import java.io.File
 import java.nio.file.{Files, Paths}
 import java.net.URI
 import scala.util.Try
-import org.chrisjr.utils.JsonUtils
+import org.chrisjr.topic_annotator.utils.JsonUtils
 
 object Metadata {
   type Metadata = JsObject
@@ -52,7 +52,7 @@ object MetadataCollection {
       }
     },
     new MetadataHandler {
-      import org.chrisjr.utils.JsonUtils._
+      import org.chrisjr.topic_annotator.utils.JsonUtils._
 
       val fnameFilter = mkFilter(_.toLowerCase.endsWith("metadata.json"))
 

@@ -1,4 +1,4 @@
-package org.chrisjr.corpora
+package org.chrisjr.topic_annotator.corpora
 
 import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.JavaConversions._

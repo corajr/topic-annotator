@@ -1,7 +1,7 @@
-package org.chrisjr.topics
+package org.chrisjr.topic_annotator.topics
 
-import org.chrisjr.corpora.Corpus
-import org.chrisjr.corpora.CorpusConversions._
+import org.chrisjr.topic_annotator.corpora.Corpus
+import org.chrisjr.topic_annotator.corpora.CorpusConversions._
 
 object MalletLDA extends TopicModel {
   val stateReader = MalletStateReader
