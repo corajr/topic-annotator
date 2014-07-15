@@ -83,6 +83,15 @@ class CorpusTransformerSpec extends FunSpec with Deserializable with CorpusFixtu
     }
     it should behave like serializable(new SnowballTransformer("english"), corpus)
   }
+  
+  describe("A DehyphenationTransformer") {
+    it("should combine words split by hyphens") {
+      val dehyphenator = DehyphenationTransformer
+      val doc = Document.fromString(new java.net.URI(""), "This is a test- ing string").get
+      val hyphenCorpus = Corpus(documents = Seq(doc))
+      checkTokens(hyphenCorpus, dehyphenator, { x => !x.contains("-") })
+    }
+  }
 
   describe("A ScoreTransformer") {
     describe("(if topWords is set)") {

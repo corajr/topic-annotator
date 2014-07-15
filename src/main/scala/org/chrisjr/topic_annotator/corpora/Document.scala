@@ -51,7 +51,7 @@ case class Document(uri: URI, metadata: Metadata = noMetadata, tokens: GenSeq[To
 }
 
 object Document {
-  def tokensFromLineIterator(lines: Iterator[String], regex: Regex = "\\p{Alpha}+".r) = {
+  def tokensFromLineIterator(lines: Iterator[String], regex: Regex = "\\p{Alpha}+-?".r) = {
     var offset = 0
     val tokens = mutable.ArrayBuffer[Token]()
     while (lines.hasNext) {

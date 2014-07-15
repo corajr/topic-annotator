@@ -37,6 +37,24 @@ object NoopTransformer extends CorpusTransformer { def process(doc: Document) = 
 
 object LowercaseTransformer extends TokenTransformer(_.toLowerCase)
 
+object DehyphenationTransformer extends CorpusTransformer {
+  def process(doc: Document) = {
+    val newTokens = collection.mutable.ArrayBuffer[Token]()
+    val tokenIterator = doc.tokens.iterator
+    while (tokenIterator.hasNext) {
+      val token = tokenIterator.next
+      if (token.string.endsWith("-") && tokenIterator.hasNext) {
+        val token2 = tokenIterator.next
+        val newString = token.string.substring(0, token.string.length - 1) + token2.string
+        newTokens += Token(start = token.start, end = token2.end, string = newString)
+      } else {
+        newTokens += token
+      }
+    }
+    doc.copy(tokens = newTokens)
+  }
+}
+
 object Snowball {
   import org.tartarus.snowball._
 
