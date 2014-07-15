@@ -7,7 +7,9 @@ import scala.collection.JavaConversions._
 import scala.util.{ Try, Success, Failure }
 
 trait CorpusTransformer extends Serializable {
-  def apply(corpus: Corpus) = Corpus(corpus.documents.map(process), corpus.transformers.:+(this))
+  def apply(corpus: Corpus) = Corpus(
+    corpus.documents.map(process).filter(_.tokens.size > 0),
+    corpus.transformers.:+(this))
   def process(document: Document): Document
 }
 

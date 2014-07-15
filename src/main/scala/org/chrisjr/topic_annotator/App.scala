@@ -67,8 +67,8 @@ object App {
       val options = TopicModelParams.defaultFor(MalletLDA)
       options.numTopics = 30
       val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
-      //      val options = TopicModelParams.defaultFor(HDP)
-      //      val annotatedCorpus = HDP.annotate(corpus, options)
+//      val options = TopicModelParams.defaultFor(HDP)
+//      val annotatedCorpus = HDP.annotate(preprocessed, options)
       annotatedCorpus
     })
 
