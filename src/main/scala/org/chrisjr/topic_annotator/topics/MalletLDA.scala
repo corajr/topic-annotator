@@ -19,6 +19,7 @@ object MalletLDA extends TopicModel {
     args ++= Seq("--input", options.corpusFile.getCanonicalPath)
     args ++= Seq("--num-topics", options.numTopics.toString)
     args ++= Seq("--optimize-interval", 20.toString)
+    args ++= Seq("--diagnostics-file", new java.io.File(options.outputDir, "diag.xml").getCanonicalPath)
     args ++= Seq("--output-state", options.stateFile.getCanonicalPath)
 
     takeOverLogging
