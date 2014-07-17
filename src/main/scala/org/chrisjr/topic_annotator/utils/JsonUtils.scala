@@ -9,6 +9,7 @@ import org.chrisjr.topic_annotator.corpora._
 import org.chrisjr.topic_annotator.topics._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import java.nio.ByteOrder
 
 import scala.util.Try
@@ -38,6 +39,25 @@ object JsonUtils {
     }
   }
 
+  val toToken = (b: Int, e: Int, s: Option[String], t: Int) =>
+    Token(start = b, end = e, string = s.getOrElse(""), topic = t)
+
+  implicit object tokenFormat extends Format[Token] {
+    def writes(token: Token) = {
+      Json.obj("b" -> Json.toJson(Seq(token.start, token.end)), "t" -> token.topic)
+    }
+    def reads(json: JsValue): JsResult[Token] = json match {
+      case x: JsObject =>
+        val tokenOpt = for {
+          bounds <- (x \ "b").asOpt[Seq[Int]]
+          topic <- (x \ "t").asOpt[Int]
+          string = (x \ "s").asOpt[String]
+        } yield Token(start = bounds(0), end = bounds(1), string = string.getOrElse(""), topic = topic)
+        tokenOpt.map(JsSuccess(_))
+          .getOrElse(JsError(Seq(JsPath() -> Seq(ValidationError("error.expected.validtoken")))))
+      case _ => JsError(Seq(JsPath() -> Seq(ValidationError("error.expected.token"))))
+    }
+  }
   def toSerializableJson[T](o: T)(implicit tjs: Writes[T]): JsValue with Serializable = {
     val value = Json.toJson(o)
     if (value.isInstanceOf[JsString]) value.asInstanceOf[JsString]
@@ -118,9 +138,14 @@ object JsonUtils {
     textPath.toFile.mkdirs()
     for (doc <- corpus.documents if doc.tokens.size > 0) {
       val itemID = (doc.metadata \ "id").as[Int].toString
-      val docFile = textPath.resolve(itemID)
-      val html = Try(doc.topicsHTML.getBytes(StandardCharsets.UTF_8))
-      html foreach { bytes => Files.write(docFile, bytes) }
+      val docFile = textPath.resolve(itemID + ".txt")
+      val annotationFile = textPath.resolve(itemID + ".json")
+
+      val text = Try(doc.text.getBytes(StandardCharsets.UTF_8))
+      text foreach { bytes => Files.write(docFile, bytes) }
+
+      val annotations = Try(Json.stringify(Json.toJson(doc.tokens.seq)).getBytes(StandardCharsets.UTF_8))
+      annotations foreach { bytes => Files.write(annotationFile, bytes) }
     }
   }
 }

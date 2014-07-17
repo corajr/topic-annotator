@@ -16,8 +16,8 @@ object App {
     val corpusFile = if (args.length > 1) Some(new File(args(1))) else None
     val preprocessedCorpusFile = if (args.length > 2) Some(new File(args(2))) else None
 
-    //    importCorpusAndProcess(inputDirOpt, corpusFile, preprocessedCorpusFile)
-    compareStates
+    importCorpusAndProcess(inputDirOpt, corpusFile, preprocessedCorpusFile)
+    //    compareStates
   }
 
   def compareStates = {
@@ -33,8 +33,8 @@ object App {
     }
 
     val tws = dirs.map(getTW)
-    
-    var jsds = Map[(Int, Int), Iterable[(Int, Int, Double)]]()
+
+    var jsds = collection.immutable.HashMap[(Int, Int), Iterable[(Int, Int, Double)]]()
 
     for (
       i <- 0 until tws.length;
@@ -44,11 +44,11 @@ object App {
         (iTopic, topic1) <- tws(i)
         (jTopic, topic2) <- tws(j)
       } yield (iTopic, jTopic, StateStats.jsdMetric(topic1, topic2))
-      
-      jsds = jsds.updated((i+1, j+1), jsdsIJ)
+
+      jsds = jsds.updated((i + 1, j + 1), jsdsIJ)
     }
 
-    Util.pickle(new File(dir, "jsds"), jsds.toArray)
+    Util.pickle(new File(dir, "jsds"), jsds)
   }
 
   def importCorpusAndProcess(
@@ -73,10 +73,11 @@ object App {
     var startTime = System.currentTimeMillis()
     var docsN = 0
 
-    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(30))) {
+    //    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(30))) {
+    for ((i, numTopics) <- Seq((4, 30))) {
       val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
-      Logging.logTo(new File(malletOutputDir, "log.txt"))
+      //      Logging.logTo(new File(malletOutputDir, "log.txt"))
 
       val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
         val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
@@ -120,8 +121,8 @@ object App {
         //      val annotatedCorpus = HDP.annotate(preprocessed, options)
         annotatedCorpus
       })
-      //    val outDir = new File("/Users/chrisjr/Desktop/success")
-      //    JsonUtils.toPaperMachines(annotated, outDir)
+      val outDir = new File("/Users/chrisjr/Desktop/success")
+      JsonUtils.toPaperMachines(annotated, outDir)
     }
   }
 }

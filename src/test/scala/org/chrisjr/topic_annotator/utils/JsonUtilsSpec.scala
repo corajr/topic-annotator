@@ -45,6 +45,19 @@ class JsonUtilsSpec extends FunSpec {
 
     }
   }
+  
+  describe("The Token implicit conversion") {
+    val token = Token(start = 1, end = 5, string = "", topic = 1)
+    it("should turn a token into JSON") {
+      val tokenJSON = Json.toJson(token)
+      tokenJSON.toString.size should be > 0
+    }
+    it("should parse a token from JSON") {
+      val tokenJSON = Json.toJson(token)
+      val token2 = tokenJSON.as[Token]
+      token2 shouldEqual token
+    }
+  }
 
 }
 

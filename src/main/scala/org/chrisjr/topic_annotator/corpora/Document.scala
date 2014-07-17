@@ -13,6 +13,15 @@ import MetadataCollection._
 
 import Metadata._
 case class Document(uri: URI, metadata: Metadata = noMetadata, tokens: GenSeq[Token]) {
+  def text = {
+    val file = new File(uri)
+    if (!file.exists) throw new IllegalStateException(s"Could not find file $uri")
+    val source = Source.fromFile(file)
+    val contents = source.getLines.mkString("\n")
+    source.close
+    contents
+  }
+
   def topicsHTML = {
     val file = new File(uri)
     if (!file.exists) throw new IllegalStateException(s"Could not find file $uri")
