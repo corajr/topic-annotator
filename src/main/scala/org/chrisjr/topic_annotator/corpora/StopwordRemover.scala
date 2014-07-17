@@ -2,7 +2,11 @@ package org.chrisjr.topic_annotator.corpora
 
 import scala.util.{Try, Success, Failure}
 
-class StopwordRemover(stopwords: Set[String]) extends TokenFilter({ x => !stopwords.contains(x) })
+class StopwordRemover(val stopwords: Set[String]) extends TokenFilter({ x => !stopwords.contains(x) }) {
+  def ++(other: StopwordRemover) = {
+    new StopwordRemover(stopwords ++ other.stopwords)
+  }
+}
 
 object StopwordRemover {
   val stoplistDir = new java.io.File(getClass.getResource("stoplists").toURI())

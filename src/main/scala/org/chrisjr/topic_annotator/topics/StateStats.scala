@@ -12,6 +12,16 @@ object StateStats {
   }
 
   /**
+   * @param ps the probabilities of P as an array
+   * @param q the probabilities of Q as an array
+   * @return sqrt of the Jensen-Shannon Divergence, a metric with values in [0, 1]
+   */
+  def jsdMetric(p: Iterable[Double], q: Iterable[Double]) = {
+    val m = (p zip q).map { case (pi, qi) => 0.5 * (pi + qi) }
+    math.sqrt(entropy(m) - (0.5 * (entropy(p) + entropy(q))))
+  }
+
+  /**
    * See Mimno and Blei 2011: https://www.cs.princeton.edu/~blei/papers/MimnoBlei2011.pdf
    *
    * @param state the Gibbs state to process
@@ -25,8 +35,8 @@ object StateStats {
     val twByDoc = mutable.HashMap[(Int, Int), Array[Double]]()
 
     for (Assignment(d, w, t) <- state.assignments) {
-      if (!twByDoc.contains((t,w))) twByDoc((t,w)) = Array.fill(state.docsN)(0.0)
-      twByDoc((t,w))(d) += 1
+      if (!twByDoc.contains((t, w))) twByDoc((t, w)) = Array.fill(state.docsN)(0.0)
+      twByDoc((t, w))(d) += 1
     }
 
     val topicWordImi = SparseMatrix(0.0)

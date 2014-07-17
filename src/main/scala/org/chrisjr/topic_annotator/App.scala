@@ -16,7 +16,39 @@ object App {
     val corpusFile = if (args.length > 1) Some(new File(args(1))) else None
     val preprocessedCorpusFile = if (args.length > 2) Some(new File(args(2))) else None
 
-    importCorpusAndProcess(inputDirOpt, corpusFile, preprocessedCorpusFile)
+    //    importCorpusAndProcess(inputDirOpt, corpusFile, preprocessedCorpusFile)
+    compareStates
+  }
+
+  def compareStates = {
+    val dir = new File("/Users/chrisjr/Desktop")
+    val dirs = (1 to 5).map(i => new File(dir, s"m$i.30"))
+
+    def getTW(stateDir: File) = {
+      val state = MalletStateReader.fromFile(new File(stateDir, "state"))
+      val wordsN = state.wordsN
+      state.topicTypes.normalized.mapValues { x =>
+        (0 until wordsN).map(x.getOrElse(_, 0.0))
+      }
+    }
+
+    val tws = dirs.map(getTW)
+    
+    var jsds = Map[(Int, Int), Iterable[(Int, Int, Double)]]()
+
+    for (
+      i <- 0 until tws.length;
+      j <- 0 until i
+    ) {
+      val jsdsIJ = for {
+        (iTopic, topic1) <- tws(i)
+        (jTopic, topic2) <- tws(j)
+      } yield (iTopic, jTopic, StateStats.jsdMetric(topic1, topic2))
+      
+      jsds = jsds.updated((i+1, j+1), jsdsIJ)
+    }
+
+    Util.pickle(new File(dir, "jsds"), jsds.toArray)
   }
 
   def importCorpusAndProcess(
@@ -41,12 +73,12 @@ object App {
     var startTime = System.currentTimeMillis()
     var docsN = 0
 
-    for (numTopics <- Seq(20, 25, 30, 40, 50, 75, 100)) {
-      val malletOutputDir = new File("/Users/chrisjr/Desktop/m" + numTopics.toString)
+    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(30))) {
+      val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
       Logging.logTo(new File(malletOutputDir, "log.txt"))
 
-      val annotated = doOrUnpickle(Some(annotatedFile(numTopics.toString)), {
+      val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
         val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
           val raw = doOrUnpickle(corpusFile, {
             val corpusTry = Corpus.fromDir(inputDir)
@@ -56,14 +88,21 @@ object App {
           docsN = raw.documents.size
           println(s"$docsN documents loaded")
 
+          val stem = Snowball.getStemFuncFor("en")
+
+          val stopwords = StopwordRemover.forLang("en").get ++
+            StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get ++
+            StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get
+
+          val stemmedStops = new StopwordRemover(stopwords.stopwords.map(stem))
+
           val transformers = Seq(LowercaseTransformer,
             DehyphenationTransformer,
             new MinLengthRemover(4),
-            StopwordRemover.forLang("en").get,
-            StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get,
-            StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get,
+            stopwords,
             new SnowballTransformer("english"),
-            new ScoreTransformer(topWords = 10000, minDf = 10))
+            stemmedStops,
+            new ScoreTransformer(topWords = 5000, minDf = 10))
           raw.transform(transformers)
         })
 
