@@ -30,6 +30,10 @@ class CorpusScorerSpec extends FunSpec with CorpusScorerFixture {
     it("should return TF-IDF scores") {
       scorer.tfidf.size should be > 0
     }
+    
+    it("should return log-entropy scores") {
+      scorer.logent.size should be > 0
+    }
   }
 
 }

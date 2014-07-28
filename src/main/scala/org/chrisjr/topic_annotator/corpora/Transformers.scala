@@ -119,13 +119,21 @@ trait PreprocessingTransformer extends CorpusTransformer {
   }
 }
 
-class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3)
+import CorpusScorer._
+
+class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3, scorerType: ScorerType = TfIdf)
   extends CorpusTransformer with PreprocessingTransformer {
   val stopwords = new ConcurrentSkipListSet[String]
 
   def preprocess(corpus: Corpus) = {
     val scorer = new CorpusScorer(corpus, minDf)
-    val scores = scorer.tfidf.seq.toSeq.sortBy(_._2).reverse
+    val scores = (scorerType match {
+      case TfIdf =>
+        scorer.tfidf
+      case LogEnt =>
+        scorer.logent
+    }).seq.toSeq.sortBy(_._2).reverse
+
     stopwords.addAll(scores.drop(topWords).unzip._1)
   }
 

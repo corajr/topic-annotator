@@ -1,12 +1,12 @@
 package org.chrisjr.topic_annotator.corpora
 
+import org.chrisjr.topic_annotator.utils.Math._
+
 import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.JavaConversions._
 import scala.collection.GenIterable
 
 class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
-  def log2(x: Double) = math.log(x) / math.log(2)
-
   def sumByKey[A](tuples: Iterable[(A, Int)]) = {
     val m = scala.collection.mutable.Map.empty[A, Int].withDefaultValue(0)
     for ((k, v) <- tuples) m += (k -> (v + m(k)))
@@ -38,6 +38,8 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
     vocabSet.iterator.zipWithIndex.toMap
   }
 
+  lazy val vocabArray = vocab.toSeq.sortBy(_._2).unzip._1
+
   lazy val tfs = {
     val alwaysOne = Stream.continually(1)
     (for {
@@ -47,6 +49,7 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
   }
 
   lazy val tfMaxima = maxByKey(tfs.flatten)
+  lazy val tfOverall = sumByKey(tfs.flatten)
   lazy val df = sumByKey(tfs.flatMap { _ map { x => (x._1, 1) } })
 
   lazy val tfidf = {
@@ -58,4 +61,27 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
       idf = if (d >= minDf) log2(D / d) else 0
     } yield (word, tf * idf))
   }
+
+  lazy val logent = {
+    val D = corpus.documents.size
+    val logD = log2(D + 1)
+    val tflogs = (0 until tfMaxima.size).map { i => log2(tfMaxima(i) + 1) }
+    val ent = Array.fill[Double](df.size)(0.0)
+    for (
+      docCounts <- tfs;
+      (idx, count) <- docCounts;
+      p_i_j = count.toDouble / tfOverall(idx)
+    ) {
+      if (df(idx) >= minDf) ent(idx) += p_i_j * log2(p_i_j)
+      else ent(idx) = -logD
+    }
+    ent transform { x => 1 + (x / logD) }
+    vocabArray zip ((tflogs, ent).zipped map { _ * _ })
+  }
+}
+
+object CorpusScorer {
+  sealed trait ScorerType
+  case object TfIdf extends ScorerType
+  case object LogEnt extends ScorerType
 }

@@ -28,7 +28,24 @@ trait Deserializable { this: FunSpec =>
   }
 }
 
-class CorpusTransformerSpec extends FunSpec with Deserializable with CorpusFixture with CheckTokens with TryValues {
+trait ScoreTransforming { this: FunSpec =>
+  def scoring(scoreTransformer: CorpusTransformer, corpus: Corpus) = {
+    it("should reduce vocabulary to no more than a specified size") {
+      val newCorpus = scoreTransformer(corpus)
+      val newScorer = new CorpusScorer(newCorpus)
+      newScorer.vocab.size should be <= 10
+    }
+  }
+}
+
+class CorpusTransformerSpec
+  extends FunSpec
+  with Deserializable
+  with ScoreTransforming
+  with CorpusFixture
+  with CheckTokens
+  with TryValues {
+
   describe("A CorpusTransformer") {
     it("should return a new corpus") {
       val transformer = NoopTransformer
@@ -83,7 +100,7 @@ class CorpusTransformerSpec extends FunSpec with Deserializable with CorpusFixtu
     }
     it should behave like serializable(new SnowballTransformer("english"), corpus)
   }
-  
+
   describe("A DehyphenationTransformer") {
     it("should combine words split by hyphens") {
       val dehyphenator = DehyphenationTransformer
@@ -94,15 +111,17 @@ class CorpusTransformerSpec extends FunSpec with Deserializable with CorpusFixtu
   }
 
   describe("A ScoreTransformer") {
-    describe("(if topWords is set)") {
-      it("should reduce vocabulary to no more than a specified size") {
-        val scoreTransformer = new ScoreTransformer(topWords = 10)
-        val newCorpus = scoreTransformer(corpus)
-        val newScorer = new CorpusScorer(newCorpus)
-        newScorer.vocab.size should be <= 10
-      }
+    import CorpusScorer._
+
+    describe("(with tf-idf scoring)") {
+      it should behave like scoring(new ScoreTransformer(topWords = 10, scorerType = TfIdf), corpus)
+      it should behave like serializable(new ScoreTransformer(topWords = 10, scorerType = TfIdf), corpus)
     }
-    it should behave like serializable(new ScoreTransformer(topWords = 10), corpus)
+
+    describe("(with log-ent scoring)") {
+      it should behave like scoring(new ScoreTransformer(topWords = 10, scorerType = LogEnt), corpus)
+      it should behave like serializable(new ScoreTransformer(topWords = 10, scorerType = LogEnt), corpus)
+    }
   }
 
   describe("A sequence of Transformers") {
