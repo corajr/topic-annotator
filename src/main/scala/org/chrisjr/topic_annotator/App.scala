@@ -10,7 +10,7 @@ import scala.util.{ Try, Success, Failure }
  * @author ${user.name}
  */
 object App {
-  val topicsN = 30
+  val topicsN = 40
 
   def main(args: Array[String]) {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
@@ -75,10 +75,10 @@ object App {
     var docsN = 0
 
     //    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
-    for ((i, numTopics) <- Seq((3, topicsN))) {
+    for ((i, numTopics) <- Seq((1, topicsN))) {
       val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
-      Logging.logTo(new File(malletOutputDir, "log.txt"))
+      //      Logging.logTo(new File(malletOutputDir, "log.txt"))
 
       val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
         val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
@@ -104,24 +104,23 @@ object App {
             stopwords,
             new SnowballTransformer("english"),
             stemmedStops,
-            new ScoreTransformer(topWords = 10000, minDf = 3))
+            new ScoreTransformer(topWords = 10000, minDf = 3, scorerType = CorpusScorer.LogEnt))
           raw.transform(transformers)
         })
 
         val elapsedTime = System.currentTimeMillis() - startTime
         println(s"Took ${elapsedTime / 1000.0} seconds (avg. ${elapsedTime.toFloat / docsN} ms per doc).")
 
-        //        val options = TopicModelParams.defaultFor(MalletLDA)
-        //
-        //        options.outputDir = malletOutputDir
-        //        options.outputDir.mkdirs()
-        //        options.stateFile = new File(options.outputDir, "state")
-        //        options.numTopics = numTopics
-        //        val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
-        val options = TopicModelParams.defaultFor(HDP)
+        val options = TopicModelParams.defaultFor(MalletLDA)
         options.outputDir = malletOutputDir
         options.outputDir.mkdirs()
-        val annotatedCorpus = HDP.annotate(preprocessed, options)
+        options.stateFile = new File(options.outputDir, "state")
+        options.numTopics = numTopics
+        val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
+        //        val options = TopicModelParams.defaultFor(HDP)
+        //        options.outputDir = malletOutputDir
+        //        options.outputDir.mkdirs()
+        //        val annotatedCorpus = HDP.annotate(preprocessed, options)
         annotatedCorpus
       })
       val outDir = new File("/Users/chrisjr/Desktop/success")
