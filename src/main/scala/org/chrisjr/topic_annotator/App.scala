@@ -10,7 +10,7 @@ import scala.util.{ Try, Success, Failure }
  * @author ${user.name}
  */
 object App {
-  val topicsN = 40
+  val topicsN = 75
 
   def main(args: Array[String]) {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
@@ -18,7 +18,31 @@ object App {
     val preprocessedCorpusFile = if (args.length > 2) Some(new File(args(2))) else None
 
     importCorpusAndProcess(inputDirOpt, corpusFile, preprocessedCorpusFile)
-    //    compareStates
+//        compareStates
+//    getMetadata("/Users/chrisjr/Desktop/sscorpus.dat", "/Users/chrisjr/Desktop/m1.50/metadata.csv")
+  }
+  
+  def getMetadata(corpusFilename: String, outFilename: String) = {
+    val corpus = Util.unpickle[Corpus](new File(corpusFilename))
+    val metadata = for {
+      (doc, i) <- corpus.documents.zipWithIndex;
+      md = doc.metadata;
+      _ = println(md.toString)
+      yearOpt = (md.\("issued").\("date-parts"))(0)(0).asOpt[String]
+      year <- yearOpt
+      labelOpt = (md.\("label")).asOpt[String]
+      label <- labelOpt
+      journal = (md.\("container-title")).asOpt[String].getOrElse("")
+    } yield Seq(i, year.toInt, journal, label)
+
+    val writer = new java.io.PrintWriter(outFilename, "UTF-8")
+    
+    val header = Seq("doc", "year", "journal", "label")
+    writer.println(header.mkString(","))
+    metadata.foreach { x =>
+      writer.println(x.mkString(","))
+    }
+    writer.close()
   }
 
   def compareStates = {
@@ -74,11 +98,13 @@ object App {
     var startTime = System.currentTimeMillis()
     var docsN = 0
 
-    //    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
+//    for ((i, numTopics) <- Stream.continually(1) zip (Seq(20, 30, 50, 75, 100))) {
+
+//        for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
     for ((i, numTopics) <- Seq((1, topicsN))) {
       val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
-      //      Logging.logTo(new File(malletOutputDir, "log.txt"))
+      Logging.logTo(new File(malletOutputDir, "log.txt"))
 
       val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
         val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
@@ -104,7 +130,7 @@ object App {
             stopwords,
             new SnowballTransformer("english"),
             stemmedStops,
-            new ScoreTransformer(topWords = 10000, minDf = 3, scorerType = CorpusScorer.LogEnt))
+            new ScoreTransformer(topWords = 10000, minDf = 10, scorerType = CorpusScorer.LogEnt))
           raw.transform(transformers)
         })
 
@@ -117,10 +143,10 @@ object App {
         options.stateFile = new File(options.outputDir, "state")
         options.numTopics = numTopics
         val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
-        //        val options = TopicModelParams.defaultFor(HDP)
-        //        options.outputDir = malletOutputDir
-        //        options.outputDir.mkdirs()
-        //        val annotatedCorpus = HDP.annotate(preprocessed, options)
+        //                val options = TopicModelParams.defaultFor(HDP)
+        //                options.outputDir = malletOutputDir
+        //                options.outputDir.mkdirs()
+        //                val annotatedCorpus = HDP.annotate(preprocessed, options)
         annotatedCorpus
       })
       val outDir = new File("/Users/chrisjr/Desktop/success")

@@ -109,6 +109,15 @@ class CorpusTransformerSpec
       checkTokens(hyphenCorpus, dehyphenator, { x => !x.contains("-") })
     }
   }
+  
+  describe("A CommonSubstringRemover") {
+    it("should remove common substrings longer than a specified length") {
+      val csr = new CommonSubstringRemover(minLength = 15)
+      val einsteinSample = new File(getClass.getResource("einstein").toURI())
+      val csrCorpus = Corpus.fromDir(einsteinSample).get
+      checkTokens(csrCorpus, csr, { x => !x.contains("einstein") })
+    }
+  }
 
   describe("A ScoreTransformer") {
     import CorpusScorer._

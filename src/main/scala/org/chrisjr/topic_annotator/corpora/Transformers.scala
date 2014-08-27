@@ -140,3 +140,37 @@ class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3, scorerType: ScorerT
   def process(doc: Document) = doc.copy(tokens =
     doc.tokens.filter { token => !stopwords.contains(token.string) })
 }
+
+class CommonSubstringRemover(minLength: Int = 20, grouping: Document => String = {_ => ""})
+  extends CorpusTransformer with PreprocessingTransformer {
+  var excludedRanges = collection.immutable.HashMap[java.net.URI, Seq[(Int, Int)]]()
+  
+  import com.googlecode.concurrenttrees.solver.LCSubstringSolver
+  import com.googlecode.concurrenttrees.radix.node.concrete.SmartArrayBasedNodeFactory
+  import com.googlecode.concurrenttrees.common.CharSequences
+  
+  def preprocess(corpus: Corpus) = {
+    val groups = corpus.documents.groupBy(grouping)
+    for ((key, group) <- groups) {
+      val solver = new LCSubstringSolver(new SmartArrayBasedNodeFactory)
+      for (doc <- group) {
+        solver.add(doc.text)        
+      }
+      val lcs = solver.getLongestCommonSubstring()
+
+      if (lcs.length >= minLength) {
+        val regex = CharSequences.toString(lcs).r
+        for (doc <- group) {
+          excludedRanges += doc.uri -> regex.findAllMatchIn(doc.text).map { x => (x.start, x.end)}.toSeq
+        }
+      }
+    }
+  }
+
+  def process(doc: Document) = {   
+    val ranges = excludedRanges.getOrElse(doc.uri, Seq())
+    doc.copy(tokens = doc.tokens.filter { x =>
+      !ranges.exists { r => x.start >= r._1 && x.end <= r._2 }
+    })
+  }
+}
