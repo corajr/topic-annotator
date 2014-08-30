@@ -27,9 +27,9 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
   //  }
 
   lazy val vocab = {
-    val vocabSet = new ConcurrentSkipListSet[String]
+    val vocabSet = new collection.mutable.LinkedHashSet[String]
     for (
-      doc <- corpus.documents;
+      doc <- corpus.documents.seq;
       tokenStr <- doc.tokens.map(_.string)
     ) {
       vocabSet.add(tokenStr)
@@ -51,6 +51,8 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
   lazy val tfMaxima = maxByKey(tfs.flatten)
   lazy val tfOverall = sumByKey(tfs.flatten)
   lazy val df = sumByKey(tfs.flatMap { _ map { x => (x._1, 1) } })
+
+  lazy val dfScore = vocab.mapValues(df)
 
   lazy val tfidf = {
     val D = corpus.documents.size
@@ -82,6 +84,7 @@ class CorpusScorer(corpus: Corpus, minDf: Int = 3) {
 
 object CorpusScorer {
   sealed trait ScorerType
+  case object MinDf extends ScorerType
   case object TfIdf extends ScorerType
   case object LogEnt extends ScorerType
 }

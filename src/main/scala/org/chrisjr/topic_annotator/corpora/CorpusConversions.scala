@@ -16,19 +16,19 @@ object CorpusConversions {
     val ldacFile = mkFile(ldacPrefix, ".ldac")
     val dmapFile = mkFile(ldacPrefix, ".dmap")
     val scorer = new CorpusScorer(corpus)
-    val vocab = scorer.vocab
+    val vocab = scorer.vocabArray
     val tfs = scorer.tfs
 
     val ldacWriter = new PrintWriter(ldacFile)
     for (docTf <- tfs) {
-      val total = docTf.values.sum
-      val counts = docTf.map { case (word, count) => s"$word:$count" } mkString " "
+      val total = docTf.keys.size
+      val counts = docTf.toSeq.sorted.map { case (word, count) => s"${word+1}:$count" } mkString " "
       ldacWriter.println(s"$total $counts")
     }
     ldacWriter.close()
 
     val vocabWriter = new PrintWriter(vocabFile)
-    for (word <- vocab.toSeq.sortBy(_._2).unzip._1) {
+    for (word <- vocab) {
       vocabWriter.println(word)
     }
     vocabWriter.close()

@@ -110,6 +110,18 @@ class CorpusTransformerSpec
     }
   }
   
+  describe("A Dedupe") {
+    it("should remove all but one of identical texts") {
+      val moddedDocs = corpus.documents.map(x => x.copy(metadata = x.metadata - "itemID"))
+      val dupedCorpus = corpus.copy(documents = corpus.documents ++ moddedDocs)
+      dupedCorpus.documents should have size (corpus.documents.size*2)
+      val dedupe = new Dedupe
+      val transformed = dedupe(dupedCorpus)
+      transformed.documents should have size corpus.documents.size
+    }
+    it should behave like serializable(new Dedupe, corpus)
+  }
+
   describe("A CommonSubstringRemover") {
     it("should remove common substrings longer than a specified length") {
       val csr = new CommonSubstringRemover(minLength = 15)
@@ -117,10 +129,24 @@ class CorpusTransformerSpec
       val csrCorpus = Corpus.fromDir(einsteinSample).get
       checkTokens(csrCorpus, csr, { x => !x.contains("einstein") })
     }
+    it should behave like serializable(new CommonSubstringRemover(minLength = 15), corpus)
   }
 
   describe("A ScoreTransformer") {
     import CorpusScorer._
+    
+    it("should have a function that returns values centered around median") {
+      val n = 10000
+      val m = 500
+      val values = (0 until n).map(x => (x.toString, x.toDouble / n))
+      val st = new ScoreTransformer
+      val scores = st.medianTransform(values, m)
+      val (keep, reject) = scores.splitAt(m)
+      keep should have size m
+      reject should have size n-m
+      keep.head._1.toInt should be ((n/2) - (m/2))
+      keep.last._1.toInt should be ((n/2) + (m/2) - 1)
+    }
 
     describe("(with tf-idf scoring)") {
       it should behave like scoring(new ScoreTransformer(topWords = 10, scorerType = TfIdf), corpus)

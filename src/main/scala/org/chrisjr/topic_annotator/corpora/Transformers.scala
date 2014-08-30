@@ -8,9 +8,9 @@ import scala.util.{ Try, Success, Failure }
 
 trait CorpusTransformer extends Serializable {
   def apply(corpus: Corpus) = Corpus(
-    corpus.documents.map(process).filter(_.tokens.size > 0),
+    corpus.documents.flatMap(process).filter(_.tokens.size > 0),
     corpus.transformers.:+(this))
-  def process(document: Document): Document
+  def process(document: Document): Seq[Document]
 }
 
 object CorpusTransformer {
@@ -18,22 +18,31 @@ object CorpusTransformer {
   def combine(ct1: CorpusTransformer, ct2: CorpusTransformer): CorpusTransformer =
     new CorpusTransformer {
       override def apply(corpus: Corpus) = Corpus(
-        corpus.documents.map(process),
+        corpus.documents.flatMap(process),
         corpus.transformers ++ Seq(ct1, ct2))
-      def process(document: Document) = ct2.process(ct1.process(document))
+      def process(document: Document) = ct1.process(document).flatMap(ct2.process)
     }
 }
 
 class TokenTransformer(f: String => String) extends CorpusTransformer {
-  def process(doc: Document) = doc.copy(tokens =
-    doc.tokens.map { token => token.copy(string = f(token.string)) })
+  def process(doc: Document) = Seq(doc.copy(tokens =
+    doc.tokens.map { token => token.copy(string = f(token.string)) }))
 }
 
 class TokenFilter(f: String => Boolean) extends CorpusTransformer {
-  def process(doc: Document) = doc.copy(tokens = doc.tokens.filter { token => f(token.string) })
+  def process(doc: Document) = Seq(doc.copy(tokens = doc.tokens.filter { token => f(token.string) }))
 }
 
-object NoopTransformer extends CorpusTransformer { def process(doc: Document) = doc }
+trait DocumentFilter extends CorpusTransformer {
+  def pred(doc: Document): Boolean
+  def process(doc: Document): Seq[Document] = if (pred(doc)) Seq(doc) else Seq()
+}
+
+class DocumentFilterBy(f: Document => Boolean) extends DocumentFilter {
+  def pred(doc: Document) = f(doc)
+}
+
+object NoopTransformer extends CorpusTransformer { def process(doc: Document) = Seq(doc) }
 
 object LowercaseTransformer extends TokenTransformer(_.toLowerCase)
 
@@ -51,7 +60,7 @@ object DehyphenationTransformer extends CorpusTransformer {
         newTokens += token
       }
     }
-    doc.copy(tokens = newTokens)
+    Seq(doc.copy(tokens = newTokens))
   }
 }
 
@@ -125,52 +134,84 @@ class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3, scorerType: ScorerT
   extends CorpusTransformer with PreprocessingTransformer {
   val stopwords = new ConcurrentSkipListSet[String]
 
-  def preprocess(corpus: Corpus) = {
-    val scorer = new CorpusScorer(corpus, minDf)
-    val scores = (scorerType match {
-      case TfIdf =>
-        scorer.tfidf
-      case LogEnt =>
-        scorer.logent
-    }).seq.toSeq.sortBy(_._2).reverse
-
-    stopwords.addAll(scores.drop(topWords).unzip._1)
+  def medianTransform(ascending: Iterable[(String, Double)], n: Int): Iterable[(String, Double)] = {
+    val median = ascending.size / 2
+    val start = math.max(median - n/2, 0)
+    val end = math.min(median + n/2, ascending.size - 1)
+    ascending.slice(start, end) ++ ascending.take(start) ++ ascending.drop(end)
   }
 
-  def process(doc: Document) = doc.copy(tokens =
-    doc.tokens.filter { token => !stopwords.contains(token.string) })
+  def preprocess(corpus: Corpus) = {
+    val scorer = new CorpusScorer(corpus, minDf)
+    val stops = (scorerType match {
+      case MinDf =>
+        val dfs = scorer.dfScore.toSeq.sortBy(_._2).reverse
+        if (topWords < Int.MaxValue) dfs.drop(topWords).unzip._1
+        else dfs.dropWhile(_._2 >= minDf).unzip._1
+      case TfIdf =>
+        scorer.tfidf.seq.toSeq.sortBy(_._2).reverse.drop(topWords).unzip._1
+      case LogEnt =>
+//        medianTransform(scorer.logent.sortBy(_._2), topWords)
+        scorer.logent.sortBy(_._2).reverse.drop(topWords).unzip._1
+    })
+
+    stopwords.addAll(stops)
+  }
+
+  def process(doc: Document) = Seq(doc.copy(tokens =
+    doc.tokens.filter { token => !stopwords.contains(token.string) }))
 }
 
-class CommonSubstringRemover(minLength: Int = 20, grouping: Document => String = {_ => ""})
+class Dedupe extends PreprocessingTransformer with DocumentFilter {
+  var toKeep = collection.immutable.HashSet[Int]()
+  
+  def preprocess(corpus: Corpus) = {
+    corpus.documents.groupBy(_.text.hashCode).values.foreach { x =>
+      toKeep += x.head.hashCode
+    }
+  }
+
+  def pred(doc: Document) = toKeep.contains(doc.hashCode)
+}
+
+class CommonSubstringRemover(minLength: Int = 20, grouping: Document => String = {_ => ""}, maxLength: Int = 10000)
   extends CorpusTransformer with PreprocessingTransformer {
-  var excludedRanges = collection.immutable.HashMap[java.net.URI, Seq[(Int, Int)]]()
+  var excludedRanges = collection.immutable.HashMap[java.net.URI, Vector[(Int, Int)]]()
   
   import com.googlecode.concurrenttrees.solver.LCSubstringSolver
-  import com.googlecode.concurrenttrees.radix.node.concrete.SmartArrayBasedNodeFactory
+  import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNodeFactory
   import com.googlecode.concurrenttrees.common.CharSequences
   
   def preprocess(corpus: Corpus) = {
+    var i = 0
     val groups = corpus.documents.groupBy(grouping)
-    for ((key, group) <- groups) {
-      val solver = new LCSubstringSolver(new SmartArrayBasedNodeFactory)
-      for (doc <- group) {
-        solver.add(doc.text)        
+    for ((key, group) <- groups
+        if group.size > 1
+    ) {
+      val solver = new LCSubstringSolver(new DefaultCharSequenceNodeFactory)
+      for (doc <- group.take(2)) {
+	    val text = doc.text
+	    if (text.length > 0) solver.add(text.substring(0, math.min(text.length, maxLength)))
       }
-      val lcs = solver.getLongestCommonSubstring()
+
+      val lcs = CharSequences.toString(solver.getLongestCommonSubstring())
+
+      i += group.size
 
       if (lcs.length >= minLength) {
-        val regex = CharSequences.toString(lcs).r
+    	val regex = java.util.regex.Pattern.quote(lcs).r
         for (doc <- group) {
-          excludedRanges += doc.uri -> regex.findAllMatchIn(doc.text).map { x => (x.start, x.end)}.toSeq
+          excludedRanges += doc.uri -> regex.findAllMatchIn(doc.text).map { x => (x.start, x.end)}.toVector
         }
+//        println(s"$i done, lcs for group: ${lcs.length()}")
       }
     }
   }
 
   def process(doc: Document) = {   
     val ranges = excludedRanges.getOrElse(doc.uri, Seq())
-    doc.copy(tokens = doc.tokens.filter { x =>
+    Seq(doc.copy(tokens = doc.tokens.filter { x =>
       !ranges.exists { r => x.start >= r._1 && x.end <= r._2 }
-    })
+    }))
   }
 }

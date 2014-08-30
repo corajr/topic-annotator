@@ -10,7 +10,9 @@ import scala.util.{ Try, Success, Failure }
  * @author ${user.name}
  */
 object App {
-  val topicsN = 75
+  val topicsN = 40
+  val ldacPrefix: Option[File] = None //Some(new File("/Users/chrisjr/Desktop/ss/ss"))
+  val metadataFilename: Option[String] = None //Some("/Users/chrisjr/Desktop/ss/metadata.tsv")
 
   def main(args: Array[String]) {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
@@ -18,16 +20,20 @@ object App {
     val preprocessedCorpusFile = if (args.length > 2) Some(new File(args(2))) else None
 
     importCorpusAndProcess(inputDirOpt, corpusFile, preprocessedCorpusFile)
-//        compareStates
-//    getMetadata("/Users/chrisjr/Desktop/sscorpus.dat", "/Users/chrisjr/Desktop/m1.50/metadata.csv")
+    //    compareStates
+    //    getMetadata("/Users/chrisjr/Desktop/corpus4595756955954337501dat", "/Users/chrisjr/Desktop/success_scripts/files.tsv")
   }
-  
-  def getMetadata(corpusFilename: String, outFilename: String) = {
-    val corpus = Util.unpickle[Corpus](new File(corpusFilename))
+
+  def getMetadata(corpusFilename: String, outFilename: String): Unit = saveMetadata(
+    Util.unpickle[Corpus](new File(corpusFilename)),
+    outFilename)
+
+  def saveMetadata(corpus: Corpus, outFilename: String): Unit = {
+    val sep = "\t"
     val metadata = for {
       (doc, i) <- corpus.documents.zipWithIndex;
       md = doc.metadata;
-      _ = println(md.toString)
+      //      _ = println(md.toString)
       yearOpt = (md.\("issued").\("date-parts"))(0)(0).asOpt[String]
       year <- yearOpt
       labelOpt = (md.\("label")).asOpt[String]
@@ -36,11 +42,11 @@ object App {
     } yield Seq(i, year.toInt, journal, label)
 
     val writer = new java.io.PrintWriter(outFilename, "UTF-8")
-    
+
     val header = Seq("doc", "year", "journal", "label")
-    writer.println(header.mkString(","))
+    writer.println(header.mkString(sep))
     metadata.foreach { x =>
-      writer.println(x.mkString(","))
+      writer.println(x.mkString(sep))
     }
     writer.close()
   }
@@ -76,6 +82,41 @@ object App {
     Util.pickle(new File(dir, "jsds"), jsds)
   }
 
+  def urlGroup(x: Document): String = {
+    val url = (x.metadata \ "URL").asOpt[String]
+    if (url.nonEmpty) new java.net.URL(url.get).getHost() else ""
+  }
+  
+  def filterByLabel(label: String) = {
+    def hasLabel(doc: Document) = {
+      val labelOpt = (doc.metadata \ "label").asOpt[String]
+      labelOpt.nonEmpty && labelOpt.get == label
+    }
+    new DocumentFilterBy(hasLabel)
+  }
+
+  def mkTransformers: Seq[CorpusTransformer] = {
+    val stem = Snowball.getStemFuncFor("en")
+
+    val stopwords = StopwordRemover.forLang("en").get ++
+      StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get ++
+      StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get
+
+    val stemmedStops = new StopwordRemover(stopwords.stopwords.map(stem))
+
+    Seq(new Dedupe,
+      new CommonSubstringRemover(minLength = 20, grouping = urlGroup),
+      LowercaseTransformer,
+      new RegexTransformer("\\W+".r, ""),
+//      filterByLabel("International journals"), //"Successful School articles"),
+      // DehyphenationTransformer,
+      new MinLengthRemover(4),
+      stopwords,
+      new SnowballTransformer("english"),
+      stemmedStops,
+      new ScoreTransformer(topWords = Int.MaxValue, minDf = 3, scorerType = CorpusScorer.MinDf))
+  }
+
   def importCorpusAndProcess(
     inputDirOpt: Option[File],
     corpusFile: Option[File],
@@ -98,16 +139,15 @@ object App {
     var startTime = System.currentTimeMillis()
     var docsN = 0
 
-//    for ((i, numTopics) <- Stream.continually(1) zip (Seq(20, 30, 50, 75, 100))) {
-
-//        for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
-    for ((i, numTopics) <- Seq((1, topicsN))) {
+//    for ((i, numTopics) <- Stream.continually(1) zip (Seq(30, 40, 50, 75, 100))) {
+    //    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
+    for ((i, numTopics) <- Seq((2, topicsN))) {
       val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
-      Logging.logTo(new File(malletOutputDir, "log.txt"))
-
       val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
-        val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
+    	Logging.logTo(new File(malletOutputDir, "log.txt"))
+
+    	val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
           val raw = doOrUnpickle(corpusFile, {
             val corpusTry = Corpus.fromDir(inputDir)
             val myCorpus = corpusTry.get
@@ -116,26 +156,15 @@ object App {
           docsN = raw.documents.size
           println(s"$docsN documents loaded")
 
-          val stem = Snowball.getStemFuncFor("en")
-
-          val stopwords = StopwordRemover.forLang("en").get ++
-            StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get ++
-            StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get
-
-          val stemmedStops = new StopwordRemover(stopwords.stopwords.map(stem))
-
-          val transformers = Seq(LowercaseTransformer,
-            DehyphenationTransformer,
-            new MinLengthRemover(4),
-            stopwords,
-            new SnowballTransformer("english"),
-            stemmedStops,
-            new ScoreTransformer(topWords = 10000, minDf = 10, scorerType = CorpusScorer.LogEnt))
+          val transformers = mkTransformers
           raw.transform(transformers)
         })
 
         val elapsedTime = System.currentTimeMillis() - startTime
         println(s"Took ${elapsedTime / 1000.0} seconds (avg. ${elapsedTime.toFloat / docsN} ms per doc).")
+
+        if (ldacPrefix.nonEmpty) CorpusConversions.toLDAC(preprocessed, ldacPrefix.get)
+        if (metadataFilename.nonEmpty) saveMetadata(preprocessed, metadataFilename.get)
 
         val options = TopicModelParams.defaultFor(MalletLDA)
         options.outputDir = malletOutputDir
@@ -143,12 +172,16 @@ object App {
         options.stateFile = new File(options.outputDir, "state")
         options.numTopics = numTopics
         val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
-        //                val options = TopicModelParams.defaultFor(HDP)
-        //                options.outputDir = malletOutputDir
-        //                options.outputDir.mkdirs()
-        //                val annotatedCorpus = HDP.annotate(preprocessed, options)
+
+        /*
+        val options = TopicModelParams.defaultFor(HDP)
+        options.outputDir = malletOutputDir
+        options.outputDir.mkdirs()
+        val annotatedCorpus = HDP.annotate(preprocessed, options)
+        */
         annotatedCorpus
       })
+
       val outDir = new File("/Users/chrisjr/Desktop/success")
       JsonUtils.toPaperMachines(annotated, outDir)
     }
