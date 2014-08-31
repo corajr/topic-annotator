@@ -141,7 +141,7 @@ object App {
 
 //    for ((i, numTopics) <- Stream.continually(1) zip (Seq(30, 40, 50, 75, 100))) {
     //    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
-    for ((i, numTopics) <- Seq((2, topicsN))) {
+    for ((i, numTopics) <- Seq((1, topicsN))) {
       val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
       val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
@@ -159,6 +159,7 @@ object App {
           val transformers = mkTransformers
           raw.transform(transformers)
         })
+//        CorpusConversions.toVocab(preprocessed, "/Users/chrisjr/Desktop/sswords.tsv")
 
         val elapsedTime = System.currentTimeMillis() - startTime
         println(s"Took ${elapsedTime / 1000.0} seconds (avg. ${elapsedTime.toFloat / docsN} ms per doc).")
@@ -166,21 +167,31 @@ object App {
         if (ldacPrefix.nonEmpty) CorpusConversions.toLDAC(preprocessed, ldacPrefix.get)
         if (metadataFilename.nonEmpty) saveMetadata(preprocessed, metadataFilename.get)
 
-        val options = TopicModelParams.defaultFor(MalletLDA)
+        val modelType: TopicModel = MalletDMR
+        
+        val options = TopicModelParams.defaultFor(modelType)
         options.outputDir = malletOutputDir
         options.outputDir.mkdirs()
-        options.stateFile = new File(options.outputDir, "state")
-        options.numTopics = numTopics
-        val annotatedCorpus = MalletLDA.annotate(preprocessed, options)
+        
+        val annotatedCorpus = modelType match {
+          case MalletLDA =>
+	        options.stateFile = new File(options.outputDir, "state.gz")
+	        options.numTopics = numTopics
+	        MalletLDA.annotate(preprocessed, options)
+          case MalletDMR =>
+	        options.stateFile = new File(options.outputDir, "state.gz")
+	        options.dmrParamFile = new File(options.outputDir, "dmr.parameters")
+	        options.numTopics = numTopics
+	        MalletDMR.annotate((new DmrFeatures(Set("time", "journal")))(preprocessed), options)
+          case HDP =>
+	        HDP.annotate(preprocessed, options)
+        }
 
         /*
-        val options = TopicModelParams.defaultFor(HDP)
-        options.outputDir = malletOutputDir
-        options.outputDir.mkdirs()
-        val annotatedCorpus = HDP.annotate(preprocessed, options)
         */
         annotatedCorpus
       })
+      
 
       val outDir = new File("/Users/chrisjr/Desktop/success")
       JsonUtils.toPaperMachines(annotated, outDir)

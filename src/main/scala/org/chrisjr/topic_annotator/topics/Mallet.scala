@@ -2,8 +2,9 @@ package org.chrisjr.topic_annotator.topics
 
 import org.chrisjr.topic_annotator.corpora.Corpus
 import org.chrisjr.topic_annotator.corpora.CorpusConversions._
+import org.chrisjr.topic_annotator.corpora.Document
 
-object MalletLDA extends TopicModel {
+abstract class MalletModel extends TopicModel {
   val stateReader = MalletStateReader
 
   lazy val takeOverLogging = {
@@ -12,7 +13,9 @@ object MalletLDA extends TopicModel {
     SLF4JBridgeHandler.install();
     ()
   }
+}
 
+object MalletLDA extends MalletModel {
   def trainFrom(corpus: Corpus, options: TopicModelParams) = {
     if (!options.corpusFile.exists) toMalletInstances(corpus, options.corpusFile)
     val args = collection.mutable.ArrayBuffer[String]()
@@ -26,3 +29,22 @@ object MalletLDA extends TopicModel {
     cc.mallet.topics.tui.TopicTrainer.main(args.toArray)
   }
 }
+
+object MalletDMR extends MalletModel {
+  def trainFrom(corpus: Corpus, options: TopicModelParams) = {
+    if (!options.corpusFile.exists) toDmrInstances(corpus, options.corpusFile)
+
+    takeOverLogging
+    val training = cc.mallet.types.InstanceList.load(options.corpusFile)
+    val numTopics = options.numTopics
+    val lda = new cc.mallet.topics.DMRTopicModel(numTopics)
+	lda.setOptimizeInterval(100)
+	lda.setTopicDisplay(100, 10)
+	lda.addInstances(training)
+	lda.estimate()
+
+	lda.writeParameters(options.dmrParamFile)
+	lda.printState(options.stateFile) 
+  }
+}
+

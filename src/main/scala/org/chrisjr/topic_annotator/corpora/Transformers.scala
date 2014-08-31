@@ -3,8 +3,10 @@ package org.chrisjr.topic_annotator.corpora
 import scala.util.matching.Regex
 import java.util.concurrent.ConcurrentSkipListSet
 import scala.collection.JavaConversions._
-
 import scala.util.{ Try, Success, Failure }
+
+import CorpusScorer._
+import play.api.libs.json.JsString
 
 trait CorpusTransformer extends Serializable {
   def apply(corpus: Corpus) = Corpus(
@@ -128,16 +130,14 @@ trait PreprocessingTransformer extends CorpusTransformer {
   }
 }
 
-import CorpusScorer._
-
 class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3, scorerType: ScorerType = TfIdf)
   extends CorpusTransformer with PreprocessingTransformer {
   val stopwords = new ConcurrentSkipListSet[String]
 
   def medianTransform(ascending: Iterable[(String, Double)], n: Int): Iterable[(String, Double)] = {
     val median = ascending.size / 2
-    val start = math.max(median - n/2, 0)
-    val end = math.min(median + n/2, ascending.size - 1)
+    val start = math.max(median - n / 2, 0)
+    val end = math.min(median + n / 2, ascending.size - 1)
     ascending.slice(start, end) ++ ascending.take(start) ++ ascending.drop(end)
   }
 
@@ -151,7 +151,7 @@ class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3, scorerType: ScorerT
       case TfIdf =>
         scorer.tfidf.seq.toSeq.sortBy(_._2).reverse.drop(topWords).unzip._1
       case LogEnt =>
-//        medianTransform(scorer.logent.sortBy(_._2), topWords)
+        //        medianTransform(scorer.logent.sortBy(_._2), topWords)
         scorer.logent.sortBy(_._2).reverse.drop(topWords).unzip._1
     })
 
@@ -164,7 +164,7 @@ class ScoreTransformer(topWords: Int = 5000, minDf: Int = 3, scorerType: ScorerT
 
 class Dedupe extends PreprocessingTransformer with DocumentFilter {
   var toKeep = collection.immutable.HashSet[Int]()
-  
+
   def preprocess(corpus: Corpus) = {
     corpus.documents.groupBy(_.text.hashCode).values.foreach { x =>
       toKeep += x.head.hashCode
@@ -174,24 +174,24 @@ class Dedupe extends PreprocessingTransformer with DocumentFilter {
   def pred(doc: Document) = toKeep.contains(doc.hashCode)
 }
 
-class CommonSubstringRemover(minLength: Int = 20, grouping: Document => String = {_ => ""}, maxLength: Int = 10000)
+class CommonSubstringRemover(minLength: Int = 20, grouping: Document => String = { _ => "" }, maxLength: Int = 10000)
   extends CorpusTransformer with PreprocessingTransformer {
   var excludedRanges = collection.immutable.HashMap[java.net.URI, Vector[(Int, Int)]]()
-  
+
   import com.googlecode.concurrenttrees.solver.LCSubstringSolver
   import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharSequenceNodeFactory
   import com.googlecode.concurrenttrees.common.CharSequences
-  
+
   def preprocess(corpus: Corpus) = {
     var i = 0
     val groups = corpus.documents.groupBy(grouping)
-    for ((key, group) <- groups
-        if group.size > 1
+    for (
+      (key, group) <- groups if group.size > 1
     ) {
       val solver = new LCSubstringSolver(new DefaultCharSequenceNodeFactory)
       for (doc <- group.take(2)) {
-	    val text = doc.text
-	    if (text.length > 0) solver.add(text.substring(0, math.min(text.length, maxLength)))
+        val text = doc.text
+        if (text.length > 0) solver.add(text.substring(0, math.min(text.length, maxLength)))
       }
 
       val lcs = CharSequences.toString(solver.getLongestCommonSubstring())
@@ -199,19 +199,55 @@ class CommonSubstringRemover(minLength: Int = 20, grouping: Document => String =
       i += group.size
 
       if (lcs.length >= minLength) {
-    	val regex = java.util.regex.Pattern.quote(lcs).r
+        val regex = java.util.regex.Pattern.quote(lcs).r
         for (doc <- group) {
-          excludedRanges += doc.uri -> regex.findAllMatchIn(doc.text).map { x => (x.start, x.end)}.toVector
+          excludedRanges += doc.uri -> regex.findAllMatchIn(doc.text).map { x => (x.start, x.end) }.toVector
         }
-//        println(s"$i done, lcs for group: ${lcs.length()}")
+        //        println(s"$i done, lcs for group: ${lcs.length()}")
       }
     }
   }
 
-  def process(doc: Document) = {   
+  def process(doc: Document) = {
     val ranges = excludedRanges.getOrElse(doc.uri, Seq())
     Seq(doc.copy(tokens = doc.tokens.filter { x =>
       !ranges.exists { r => x.start >= r._1 && x.end <= r._2 }
     }))
   }
+}
+
+class DmrFeatures(features: Set[String] = Set("time", "journal")) extends PreprocessingTransformer {
+  type FeatureMap = Map[String, Either[Double, String]]
+  var allFeatures = collection.immutable.HashMap[java.net.URI, String]()
+
+  // abuse of Either
+  def mapToString(m: FeatureMap): String = (for {
+    (k, value) <- m
+    res = value match {
+      case Left(n) => "=" + n.toString
+      case Right(s) => s.replaceAll("\\W+", "")
+    }
+  } yield s"$k$res").mkString(" ")
+
+  def getYear(doc: Document): Option[Int] = (doc.metadata \ "issued" \ "date-parts")(0)(0).asOpt[String].map(_.toInt)
+  def getJournal(doc: Document) = (doc.metadata \ "container-title").asOpt[String].getOrElse("")
+
+  def preprocess(corpus: Corpus) = {
+    val years = if (features.contains("time")) corpus.documents.flatMap(getYear).seq.sorted else Seq()
+
+    for (doc <- corpus.documents) {
+      val timeMap: FeatureMap = if (features.contains("time")) {
+        val pd = (getYear(doc).getOrElse(years.head).toDouble - years.head) / (years.last - years.head)
+        Map("pd" -> Left(pd), "oneminuspd" -> Left(1.0 - pd))
+      } else Map()
+
+      val journalMap: FeatureMap = if (features.contains("journal")) {
+        Map("journal" -> Right(getJournal(doc)))
+      } else Map()
+
+      val fs = timeMap ++ journalMap
+      allFeatures += doc.uri -> mapToString(fs)
+    }
+  }
+  def process(doc: Document) = Seq(doc.copy(metadata = doc.metadata + ("features" -> JsString(allFeatures(doc.uri)))))
 }

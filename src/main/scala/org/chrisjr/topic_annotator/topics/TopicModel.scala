@@ -3,12 +3,14 @@ package org.chrisjr.topic_annotator.topics
 import org.chrisjr.topic_annotator.corpora.Corpus
 import java.io.File
 import java.nio.file.Files
+import org.chrisjr.topic_annotator.corpora.Document
 
 class TopicModelParams {
   var outputDir = Files.createTempDirectory("topicmodel").toFile
   var corpusFile = new File(outputDir, "corpus.dat")
   var stateFile = new File(outputDir, "assignments.txt")
   var numTopics = -1 // unused by HDP
+  var dmrParamFile = new File(outputDir, "dmr.parameters")
 }
 
 object TopicModelParams {
@@ -16,6 +18,8 @@ object TopicModelParams {
     val params = new TopicModelParams
     t match {
       case MalletLDA =>
+        params.numTopics = 25
+      case MalletDMR =>
         params.numTopics = 25
       case HDP =>
         ()
