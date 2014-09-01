@@ -28,7 +28,7 @@ object HDP extends TopicModel {
     corpus: Corpus,
     options: TopicModelParams) = {
     val corpusFile = toCLDAFile(corpus)
-    val topicTermFile = File.createTempFile("topic-term", null)
+    val topicTermFile = new File(options.outputDir, "topic-term.txt")
 
     takeOverLogging
     HDPGibbsSampler.main(Array(corpusFile.getPath, topicTermFile.getPath, options.stateFile.getPath))

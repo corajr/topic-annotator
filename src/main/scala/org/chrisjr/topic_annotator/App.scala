@@ -10,9 +10,9 @@ import scala.util.{ Try, Success, Failure }
  * @author ${user.name}
  */
 object App {
-  val topicsN = 40
+  val topicsN = -1
   val ldacPrefix: Option[File] = None //Some(new File("/Users/chrisjr/Desktop/ss/ss"))
-  val metadataFilename: Option[String] = None //Some("/Users/chrisjr/Desktop/ss/metadata.tsv")
+  val metadataFilename: Option[String] = Some("/Users/chrisjr/Desktop/ss/metadata.tsv")
 
   def main(args: Array[String]) {
     val inputDirOpt = if (args.length > 0) Some(new File(args(0))) else None
@@ -86,7 +86,7 @@ object App {
     val url = (x.metadata \ "URL").asOpt[String]
     if (url.nonEmpty) new java.net.URL(url.get).getHost() else ""
   }
-  
+
   def filterByLabel(label: String) = {
     def hasLabel(doc: Document) = {
       val labelOpt = (doc.metadata \ "label").asOpt[String]
@@ -96,25 +96,25 @@ object App {
   }
 
   def mkTransformers: Seq[CorpusTransformer] = {
-    val stem = Snowball.getStemFuncFor("en")
-
     val stopwords = StopwordRemover.forLang("en").get ++
       StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/stopwords.txt")).get ++
       StopwordRemover.fromFile(new File("/Users/chrisjr/Desktop/success_scripts/author_names.txt")).get
 
-    val stemmedStops = new StopwordRemover(stopwords.stopwords.map(stem))
+    //    val stem = Snowball.getStemFuncFor("en")
+    //    val stemmedStops = new StopwordRemover(stopwords.stopwords.map(stem))
 
     Seq(new Dedupe,
       new CommonSubstringRemover(minLength = 20, grouping = urlGroup),
       LowercaseTransformer,
       new RegexTransformer("\\W+".r, ""),
-//      filterByLabel("International journals"), //"Successful School articles"),
+      //      filterByLabel("International journals"), //"Successful School articles"),
       // DehyphenationTransformer,
       new MinLengthRemover(4),
       stopwords,
-      new SnowballTransformer("english"),
-      stemmedStops,
-      new ScoreTransformer(topWords = Int.MaxValue, minDf = 3, scorerType = CorpusScorer.MinDf))
+//      new SnowballTransformer("english"),
+//      stemmedStops,
+//      new ScoreTransformer(topWords = Int.MaxValue, minDf = 3, scorerType = CorpusScorer.MinDf))
+      new ScoreTransformer(topWords = 5000, minDf = 3, scorerType = CorpusScorer.LogEnt))
   }
 
   def importCorpusAndProcess(
@@ -139,15 +139,15 @@ object App {
     var startTime = System.currentTimeMillis()
     var docsN = 0
 
-//    for ((i, numTopics) <- Stream.continually(1) zip (Seq(30, 40, 50, 75, 100))) {
+    //    for ((i, numTopics) <- Stream.continually(1) zip (Seq(30, 40, 50, 75, 100))) {
     //    for ((i, numTopics) <- (1 to 5) zip (Stream.continually(topicsN))) {
     for ((i, numTopics) <- Seq((1, topicsN))) {
-      val malletOutputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
+      val outputDir = new File(s"/Users/chrisjr/Desktop/m$i.$numTopics")
 
       val annotated = doOrUnpickle(Some(annotatedFile(s"$i.$numTopics")), {
-    	Logging.logTo(new File(malletOutputDir, "log.txt"))
+        Logging.logTo(new File(outputDir, "log.txt"))
 
-    	val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
+        val preprocessed = doOrUnpickle(preprocessedCorpusFile, {
           val raw = doOrUnpickle(corpusFile, {
             val corpusTry = Corpus.fromDir(inputDir)
             val myCorpus = corpusTry.get
@@ -167,34 +167,30 @@ object App {
         if (ldacPrefix.nonEmpty) CorpusConversions.toLDAC(preprocessed, ldacPrefix.get)
         if (metadataFilename.nonEmpty) saveMetadata(preprocessed, metadataFilename.get)
 
-        val modelType: TopicModel = MalletDMR
-        
+        val modelType: TopicModel = HDP
+
         val options = TopicModelParams.defaultFor(modelType)
-        options.outputDir = malletOutputDir
+        options.outputDir = outputDir
         options.outputDir.mkdirs()
-        
+        options.stateFile = new File(options.outputDir, "state")
+
         val annotatedCorpus = modelType match {
           case MalletLDA =>
-	        options.stateFile = new File(options.outputDir, "state.gz")
-	        options.numTopics = numTopics
-	        MalletLDA.annotate(preprocessed, options)
+            options.numTopics = numTopics
+            MalletLDA.annotate(preprocessed, options)
           case MalletDMR =>
-	        options.stateFile = new File(options.outputDir, "state.gz")
-	        options.dmrParamFile = new File(options.outputDir, "dmr.parameters")
-	        options.numTopics = numTopics
-	        MalletDMR.annotate((new DmrFeatures(Set("time", "journal")))(preprocessed), options)
+            options.dmrParamFile = new File(options.outputDir, "dmr.parameters")
+            options.numTopics = numTopics
+            MalletDMR.annotate((new DmrFeatures(Set("time", "journal")))(preprocessed), options)
           case HDP =>
-	        HDP.annotate(preprocessed, options)
+            HDP.annotate(preprocessed, options)
         }
-
-        /*
-        */
         annotatedCorpus
       })
-      
 
       val outDir = new File("/Users/chrisjr/Desktop/success")
       JsonUtils.toPaperMachines(annotated, outDir)
+      CorpusConversions.toVocab(annotated, new File(outputDir, "words.tsv").getCanonicalPath())
     }
   }
 }

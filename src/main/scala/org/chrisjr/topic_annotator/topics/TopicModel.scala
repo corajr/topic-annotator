@@ -5,12 +5,13 @@ import java.io.File
 import java.nio.file.Files
 import org.chrisjr.topic_annotator.corpora.Document
 
-class TopicModelParams {
+class TopicModelParams extends Serializable {
   var outputDir = Files.createTempDirectory("topicmodel").toFile
   var corpusFile = new File(outputDir, "corpus.dat")
   var stateFile = new File(outputDir, "assignments.txt")
   var numTopics = -1 // unused by HDP
   var dmrParamFile = new File(outputDir, "dmr.parameters")
+  var orderedWords = true
 }
 
 object TopicModelParams {
@@ -22,6 +23,7 @@ object TopicModelParams {
       case MalletDMR =>
         params.numTopics = 25
       case HDP =>
+        params.orderedWords = false
         ()
     }
     params
@@ -34,7 +36,7 @@ trait TopicModel {
   def annotate(corpus: Corpus, options: TopicModelParams = TopicModelParams.defaultFor(this)): Corpus = {
     if (!options.stateFile.exists) trainFrom(corpus, options)
     val state = stateReader.fromFile(options.stateFile)
-    val annotator = new StateAnnotator(state)
+    val annotator = new StateAnnotator(state, options)
     annotator(corpus)
   }
 }

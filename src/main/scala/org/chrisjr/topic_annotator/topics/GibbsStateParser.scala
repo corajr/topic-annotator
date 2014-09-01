@@ -88,7 +88,7 @@ trait MalletStateParser extends GibbsStateParser {
   def parseLine = { case Array(doc, _, _, word, _, topic) if doc.forall(_.isDigit) => Assignment(doc.toInt, word.toInt, topic.toInt) }
 }
 trait HDPStateParser extends GibbsStateParser {
-  def parseLine = { case Array(doc, word, _, topic) if doc.forall(_.isDigit) => Assignment(doc.toInt, word.toInt, topic.toInt) }
+  def parseLine = { case Array(doc, word, topic, _) if doc.forall(_.isDigit) => Assignment(doc.toInt, word.toInt, topic.toInt) }
 }
 
 object MalletStateReader extends GibbsStateReader with MalletStateParser {

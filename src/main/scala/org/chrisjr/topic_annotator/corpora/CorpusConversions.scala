@@ -44,7 +44,7 @@ object CorpusConversions {
     val ldacWriter = new PrintWriter(ldacFile)
     for (docTf <- tfs) {
       val total = docTf.keys.size
-      val counts = docTf.toSeq.sorted.map { case (word, count) => s"${word+1}:$count" } mkString " "
+      val counts = docTf.toSeq.sorted.map { case (word, count) => s"$word:$count" } mkString " "
       ldacWriter.println(s"$total $counts")
     }
     ldacWriter.close()
