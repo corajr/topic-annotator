@@ -10,7 +10,7 @@ import scala.util.{ Try, Success, Failure }
  * @author ${user.name}
  */
 object App {
-  val topicsN = -1
+  val topicsN = 40
   val ldacPrefix: Option[File] = None //Some(new File("/Users/chrisjr/Desktop/ss/ss"))
   val metadataFilename: Option[String] = Some("/Users/chrisjr/Desktop/ss/metadata.tsv")
 
@@ -113,8 +113,8 @@ object App {
       stopwords,
 //      new SnowballTransformer("english"),
 //      stemmedStops,
-//      new ScoreTransformer(topWords = Int.MaxValue, minDf = 3, scorerType = CorpusScorer.MinDf))
-      new ScoreTransformer(topWords = 5000, minDf = 3, scorerType = CorpusScorer.LogEnt))
+      new ScoreTransformer(topWords = Int.MaxValue, minDf = 3, scorerType = CorpusScorer.MinDf))
+//      new ScoreTransformer(topWords = 5000, minDf = 3, scorerType = CorpusScorer.LogEnt))
   }
 
   def importCorpusAndProcess(
@@ -167,7 +167,7 @@ object App {
         if (ldacPrefix.nonEmpty) CorpusConversions.toLDAC(preprocessed, ldacPrefix.get)
         if (metadataFilename.nonEmpty) saveMetadata(preprocessed, metadataFilename.get)
 
-        val modelType: TopicModel = HDP
+        val modelType: TopicModel = MalletDMR
 
         val options = TopicModelParams.defaultFor(modelType)
         options.outputDir = outputDir
@@ -182,15 +182,13 @@ object App {
             options.dmrParamFile = new File(options.outputDir, "dmr.parameters")
             options.numTopics = numTopics
             MalletDMR.annotate((new DmrFeatures(Set("time", "journal")))(preprocessed), options)
-          case HDP =>
-            HDP.annotate(preprocessed, options)
         }
         annotatedCorpus
       })
 
       val outDir = new File("/Users/chrisjr/Desktop/success")
-      JsonUtils.toPaperMachines(annotated, outDir)
       CorpusConversions.toVocab(annotated, new File(outputDir, "words.tsv").getCanonicalPath())
+      JsonUtils.toPaperMachines(annotated, outDir)
     }
   }
 }

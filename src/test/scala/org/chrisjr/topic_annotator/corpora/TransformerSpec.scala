@@ -112,7 +112,7 @@ class CorpusTransformerSpec
   
   describe("A Dedupe") {
     it("should remove all but one of identical texts") {
-      val moddedDocs = corpus.documents.map(x => x.copy(metadata = x.metadata - "itemID"))
+      val moddedDocs = corpus.documents.map(x => x.copy(metadata = x.metadata - "id"))
       val dupedCorpus = corpus.copy(documents = corpus.documents ++ moddedDocs)
       dupedCorpus.documents should have size (corpus.documents.size*2)
       val dedupe = new Dedupe

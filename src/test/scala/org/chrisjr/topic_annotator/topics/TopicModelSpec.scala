@@ -18,11 +18,6 @@ trait TopicTrainer { this: FunSpec =>
 }
 
 class TopicModelSpec extends FunSpec with CorpusFixture with TopicTrainer with SequentialNestedSuiteExecution {
-  describe("The HDP object") {
-    //      val stateFile = new File("/Users/chrisjr/Development/workspace/topic-annotator/src/test/resources/org/chrisjr/topics/sample-states/hdp.txt")
-    it should behave like trainUsing(HDP, corpus)
-  }
-
   describe("The MalletLDA object") {
     //      val stateFile = new File("/Users/chrisjr/Development/workspace/topic-annotator/src/test/resources/org/chrisjr/topics/sample-states/mallet.gz")
     it should behave like trainUsing(MalletLDA, corpus)

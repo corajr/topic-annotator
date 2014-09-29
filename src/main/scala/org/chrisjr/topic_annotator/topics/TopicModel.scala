@@ -22,9 +22,6 @@ object TopicModelParams {
         params.numTopics = 25
       case MalletDMR =>
         params.numTopics = 25
-      case HDP =>
-        params.orderedWords = false
-        ()
     }
     params
   }

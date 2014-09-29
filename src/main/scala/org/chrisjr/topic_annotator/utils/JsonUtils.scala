@@ -89,7 +89,7 @@ object JsonUtils {
    * @param corpus the corpus with
    * @param dir
    */
-  def toPaperMachines(corpus: Corpus, dir: File) = {
+  def toPaperMachines(corpus: Corpus, dir: File): JsObject = {
     val stateAnnotatorOpt = corpus.transformers.find(_.isInstanceOf[StateAnnotator])
     require(stateAnnotatorOpt.nonEmpty, "Corpus has not been annotated with topics!")
 
@@ -118,11 +118,11 @@ object JsonUtils {
     }
 
     val metadata = JsObject(corpus.documents.seq.view.zipWithIndex.map {
-      case (x, i) =>
+      case (x, i) if (x.metadata \ "id").validate[String].isSuccess =>
         val m = collection.mutable.HashMap[String, JsValue]()
         m ++= x.metadata.fields
         dtAsString(i).foreach { t => m += ("topics" -> JsString(t)) }
-        val itemID = m("id").as[Int].toString
+        val itemID = m("id").as[String]
         itemID -> Metadata(m.toSeq)
     })
 
@@ -137,7 +137,7 @@ object JsonUtils {
     val textPath = dirPath.resolve("js").resolve("texts")
     textPath.toFile.mkdirs()
     for (doc <- corpus.documents if doc.tokens.size > 0) {
-      val itemID = (doc.metadata \ "id").as[Int].toString
+      val itemID = (doc.metadata \ "id").as[String]
       val docFile = textPath.resolve(itemID + ".txt")
       val annotationFile = textPath.resolve(itemID + ".json")
 
@@ -147,5 +147,6 @@ object JsonUtils {
       val annotations = Try(Json.stringify(Json.toJson(doc.tokens.seq)).getBytes(StandardCharsets.UTF_8))
       annotations foreach { bytes => Files.write(annotationFile, bytes) }
     }
+    data
   }
 }
